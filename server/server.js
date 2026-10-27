@@ -55,6 +55,13 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Public rooms API endpoint
+  if (req.url === '/api/rooms') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(roomManager.getPublicRooms()));
+    return;
+  }
+
   // Serve static files from client directory (development mode)
   const clientDir = path.join(__dirname, '..', 'client');
   let filePath = req.url === '/' ? '/index.html' : req.url;
@@ -184,6 +191,18 @@ function handleMessage(ws, msg) {
 
     case MessageType.CHAT_MESSAGE:
       handleChatMessage(ws, msg.payload);
+      break;
+
+    case MessageType.GET_ROOMS:
+      ws.send(
+        createMessage(MessageType.ROOMS_LIST, {
+          rooms: roomManager.getPublicRooms(),
+        })
+      );
+      break;
+
+    case MessageType.TOGGLE_PUBLIC:
+      roomManager.toggleRoomPublic(ws, msg.payload);
       break;
 
     // ─── Game ─────────────────────────────────────────

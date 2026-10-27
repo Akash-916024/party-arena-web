@@ -16,6 +16,9 @@ const MessageType = {
   PLAYER_READY: 'playerReady',
   KICK_PLAYER: 'kickPlayer',
   CHAT_MESSAGE: 'chatMessage',
+  GET_ROOMS: 'getRooms',
+  ROOMS_LIST: 'roomsList',
+  TOGGLE_PUBLIC: 'togglePublic',
 
   // Game lifecycle
   SELECT_GAME: 'selectGame',

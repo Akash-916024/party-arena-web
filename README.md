@@ -23,6 +23,10 @@ Inspired by the native Party Arena mobile app, rewritten as a lightweight, serve
   - 💣 **Bomb Tag**: 2–8 player real-time arena tag battle! Pass the ticking bomb before it detonates.
 - **Synthesized Web Audio Engine**: Zero heavy audio asset downloads — 100% native Web Audio API synthesizer for paddle hits, wall bounces, countdowns, buzzers, and victory fanfares.
 - **In-Game Floating Reactions & Quick-Chat**: Real-time floating animated emoji bursts (🔥, 💀, 😂, 👏, 😱, 🏆) and quick-chat messages.
+- **📱 QR Code Sharing & 1-Click Invite Links**: Instant on-canvas QR code generation for phone camera scanning, native mobile sharing (`navigator.share`), and 1-click clipboard copy.
+- **🌐 Public Room Browser**: Real-time public lobby directory with live player counts, current game status, and 1-click Join / Spectate. Hosts can toggle rooms between Public and Private with one click.
+- **💬 In-Lobby Slide-Out Text Chat**: Live real-time chat drawer with unread message badges, sender tags, auto-scroll, and timestamps.
+- **📲 Progressive Web App (PWA)**: Full offline shell and installable home screen experience with Web App Manifest and Service Worker caching.
 - **Spectator Mode & Reconnect Grace**: Extra players join as spectators; 25-second reconnect grace period if connection drops during matches.
 - **Tournament Mode**:
   - **Individual Points**: Points scored across a playlist of games (1st: 3pts, 2nd: 2pts, 3rd: 1pt).

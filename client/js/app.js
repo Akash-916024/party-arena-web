@@ -49,10 +49,22 @@ const App = (() => {
             <span style="color:var(--accent);font-size:1.2rem">✎</span>
           </div>
 
+          <!-- PWA Install Banner -->
+          <div id="pwa-banner" class="pwa-install-banner">
+            <div class="flex flex-center gap-s">
+              <span style="font-size:1.4rem">📲</span>
+              <span class="body-sm" style="font-weight:600">Install Party Arena App</span>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="App.installPWA()">Install</button>
+          </div>
+
           <!-- Main Actions -->
           <div class="flex-col gap-m" style="max-width:360px;margin:0 auto;width:100%">
             <button class="btn btn-primary btn-full" onclick="App.handleCreateRoom()" id="btn-create-room">
               ✨ Create Party Room
+            </button>
+            <button class="btn btn-secondary btn-full" onclick="PublicRooms.showModal()" id="btn-browse-rooms">
+              🌐 Browse Public Rooms
             </button>
             <button class="btn btn-secondary btn-full" onclick="App.navigate('join')" id="btn-join-room">
               🔑 Join with Room Code
@@ -381,6 +393,31 @@ const App = (() => {
         Room.joinRoom(roomParam.toUpperCase());
       }, 500);
     }
+
+    // Register PWA service worker
+    if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+  }
+
+  let deferredInstallPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    const banner = document.getElementById('pwa-banner');
+    if (banner) banner.style.display = 'flex';
+  });
+
+  function installPWA() {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then((choice) => {
+      if (choice.outcome === 'accepted') {
+        const banner = document.getElementById('pwa-banner');
+        if (banner) banner.style.display = 'none';
+      }
+      deferredInstallPrompt = null;
+    });
   }
 
   return {
@@ -393,6 +430,7 @@ const App = (() => {
     saveProfileAndContinue,
     handleJoinSubmit,
     handleCreateRoom,
+    installPWA,
     currentSelectedColor: 0,
     get activeGame() { return activeGame; },
   };

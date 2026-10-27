@@ -202,11 +202,29 @@ const Room = (() => {
         </div>
 
         <div class="page-content-wide">
-          <!-- Room Code -->
+          <!-- Room Code & Sharing -->
           <div class="text-center mb-m">
-            <div class="body-sm text-muted" style="text-transform:uppercase;letter-spacing:0.15em">Room Code</div>
+            <div class="flex flex-center gap-s mb-s">
+              <span class="body-sm text-muted" style="text-transform:uppercase;letter-spacing:0.15em">Room Code</span>
+              ${_isHost ? `
+                <button class="privacy-toggle ${currentRoom.isPublic ? 'public' : 'private'}" onclick="Room.togglePrivacy()" title="Click to toggle public/private">
+                  ${currentRoom.isPublic ? '🌐 Public Room' : '🔒 Private Room'}
+                </button>
+              ` : `
+                <span class="privacy-toggle ${currentRoom.isPublic ? 'public' : 'private'}">
+                  ${currentRoom.isPublic ? '🌐 Public' : '🔒 Private'}
+                </span>
+              `}
+            </div>
             ${UI.renderRoomCode(currentRoom.roomCode)}
-            <div class="body-sm text-muted">Share this code with your friends</div>
+            <div class="mt-s flex flex-center gap-s" style="flex-wrap:wrap">
+              <button class="btn btn-secondary btn-sm" onclick="QRCodeHelper.showShareModal('${currentRoom.roomCode}')" id="btn-share-qr">
+                📱 QR Code & Share
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="QRCodeHelper.copyInviteLink('${currentRoom.roomCode}')" id="btn-copy-link">
+                📋 Copy Link
+              </button>
+            </div>
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-l);align-items:start" class="lobby-grid">
@@ -285,6 +303,9 @@ const Room = (() => {
             ${Reactions.renderEmoteBar()}
           </div>
         </div>
+
+        <!-- Chat Drawer -->
+        ${Chat.renderDrawer()}
       </div>
     `;
   }
@@ -346,6 +367,15 @@ const Room = (() => {
     Network.send(Network.MessageType.TOURNAMENT_START, {});
   }
 
+  function togglePrivacy() {
+    if (!isHost() || !currentRoom) return;
+    const newStatus = !currentRoom.isPublic;
+    Network.send(Network.MessageType.TOGGLE_PUBLIC, { isPublic: newStatus });
+    if (typeof Sound !== 'undefined' && Sound.playClick) {
+      Sound.playClick();
+    }
+  }
+
   function updateConnectionStatus(connected) {
     const dots = document.querySelectorAll('.status-dot');
     dots.forEach((dot) => {
@@ -373,6 +403,7 @@ const Room = (() => {
     showTournamentSetup,
     createTournament,
     startTournamentGame,
+    togglePrivacy,
     get currentRoom() { return currentRoom; },
     get localPlayerId() { return localPlayerId; },
     get localPlayerName() { return localPlayerName; },

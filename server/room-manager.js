@@ -51,6 +51,7 @@ class Room {
     this.selectedGameId = null;
     this.currentGame = null;
     this.tournament = null;
+    this.isPublic = true;
     this.createdAt = Date.now();
 
     // Add host
@@ -114,8 +115,23 @@ class Room {
       hostId: this.hostId,
       maxPlayers: this.maxPlayers,
       selectedGameId: this.selectedGameId,
+      isPublic: this.isPublic,
+      spectatorsCount: this.spectators.size,
       players: this.getPlayersArray(),
       tournament: this.tournament ? this.tournament.toJSON() : null,
+    };
+  }
+
+  toPublicJSON() {
+    return {
+      roomCode: this.code,
+      roomName: this.name,
+      hostName: this.host ? this.host.name : 'Host',
+      playerCount: this.playerCount,
+      maxPlayers: this.maxPlayers,
+      selectedGameId: this.selectedGameId,
+      state: this.state,
+      createdAt: this.createdAt,
     };
   }
 }
@@ -139,6 +155,7 @@ class RoomManager {
    * @returns {Room}
    */
   createRoom(ws, payload) {
+    const isPublic = payload.isPublic !== undefined ? !!payload.isPublic : true;
     const playerId = uuidv4();
     const player = new Player(
       playerId,
@@ -156,6 +173,7 @@ class RoomManager {
     } while (this.rooms.has(code));
     room.code = code;
 
+    room.isPublic = isPublic;
     this.rooms.set(code, room);
     this.playerRooms.set(playerId, code);
     this.wsToPlayer.set(ws, playerId);
@@ -476,6 +494,27 @@ class RoomManager {
     const player = room.players.get(playerId);
     if (player && player.ws && player.ws.readyState === 1) {
       player.ws.send(message);
+    }
+  }
+
+  getPublicRooms() {
+    const list = [];
+    for (const room of this.rooms.values()) {
+      if (room.isPublic && room.playerCount > 0 && !room.isFull) {
+        list.push(room.toPublicJSON());
+      }
+    }
+    return list;
+  }
+
+  toggleRoomPublic(ws, payload) {
+    const ctx = this.getRoomForWs(ws);
+    if (!ctx) return;
+    const { room, playerId } = ctx;
+    if (playerId !== room.hostId) return;
+    if (typeof payload.isPublic === 'boolean') {
+      room.isPublic = payload.isPublic;
+      this.broadcastLobbyUpdate(room);
     }
   }
 
