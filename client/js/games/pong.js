@@ -91,6 +91,19 @@ class PongGameRenderer extends BaseGameRenderer {
   }
 
   onStateUpdate(state) {
+    if (this.state && state.scores) {
+      const oldTotal = Object.values(this.state.scores || {}).reduce((a, b) => a + b, 0);
+      const newTotal = Object.values(state.scores || {}).reduce((a, b) => a + b, 0);
+      if (newTotal > oldTotal) {
+        Sound.playScore();
+      } else if (this.state.ball && state.ball) {
+        if (Math.sign(this.state.ball.vx) !== Math.sign(state.ball.vx)) {
+          Sound.playPaddleHit();
+        } else if (Math.sign(this.state.ball.vy) !== Math.sign(state.ball.vy)) {
+          Sound.playWallBounce();
+        }
+      }
+    }
     super.onStateUpdate(state);
     const header = document.getElementById('pong-header');
     if (header) {

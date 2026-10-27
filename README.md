@@ -13,16 +13,22 @@ Inspired by the native Party Arena mobile app, rewritten as a lightweight, serve
 - **Multiplayer Across Different Browsers**: Works on Chrome, Firefox, Safari, Edge, Android Chrome, and iOS Safari.
 - **Instant Room Codes**: Simple 4-letter codes (e.g. `ABCD`) — no accounts or sign-ups required.
 - **Server-Authoritative Physics & Logic**: Prevents cheating and guarantees instant synchronization across all connected players.
-- **5 Built-in Party Mini-Games**:
+- **7 Built-in Party Mini-Games**:
   - 🏓 **Pong**: 2-player real-time paddle duel with glowing neon court, ball trail effects, and touch/keyboard controls.
   - ❌ **Tic-Tac-Toe**: 2-player classic turn-based grid with glowing neon marks and win-line detection.
   - ⚡ **Reaction Speed**: 2–8 player simultaneous reflex showdown with false-start detection and millisecond accuracy.
   - 🔴 **Connect Four**: 2-player gravity disc-dropping battle with falling physics and 4-in-a-row highlights.
   - 🧠 **Memory Match**: 2–4 player card-pairing with 3D flip animations and masked anti-cheat state sync.
+  - 🪢 **Tug of War**: 2-player rapid button-masher with physics rope tension and tactile pull mechanics.
+  - 💣 **Bomb Tag**: 2–8 player real-time arena tag battle! Pass the ticking bomb before it detonates.
+- **Synthesized Web Audio Engine**: Zero heavy audio asset downloads — 100% native Web Audio API synthesizer for paddle hits, wall bounces, countdowns, buzzers, and victory fanfares.
+- **In-Game Floating Reactions & Quick-Chat**: Real-time floating animated emoji bursts (🔥, 💀, 😂, 👏, 😱, 🏆) and quick-chat messages.
+- **Spectator Mode & Reconnect Grace**: Extra players join as spectators; 25-second reconnect grace period if connection drops during matches.
 - **Tournament Mode**:
   - **Individual Points**: Points scored across a playlist of games (1st: 3pts, 2nd: 2pts, 3rd: 1pt).
   - **Team Battle**: 2 teams clash across matches.
   - **Knockout**: Bracket elimination format.
+- **Automated CI/CD**: GitHub Actions workflow automatically deploys `/client` to GitHub Pages on every push to `main`.
 - **Aesthetic UI**: Premium dark glassmorphism design system inspired by Apple HIG and cyberpunk arcades, with custom typography (Outfit & Inter), smooth micro-animations, and haptic feedback.
 
 ---

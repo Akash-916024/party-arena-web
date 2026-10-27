@@ -16,7 +16,7 @@ const {
   parseMessage,
 } = require('./protocol');
 const { RoomManager } = require('./room-manager');
-const { createGame, getAllGames } = require('./game-engine');
+const { createGame, getAllGames, getGameById } = require('./game-engine');
 const { TournamentManager } = require('./tournament-manager');
 
 const PORT = process.env.PORT || 3000;
@@ -182,6 +182,10 @@ function handleMessage(ws, msg) {
       roomManager.kickPlayer(ws, msg.payload);
       break;
 
+    case MessageType.CHAT_MESSAGE:
+      handleChatMessage(ws, msg.payload);
+      break;
+
     // ─── Game ─────────────────────────────────────────
     case MessageType.GAME_START:
       handleGameStart(ws, msg.payload);
@@ -210,6 +214,27 @@ function handleMessage(ws, msg) {
   }
 }
 
+// ─── Chat / Emote Handler ───────────────────────────────────────────
+function handleChatMessage(ws, payload) {
+  const ctx = roomManager.getRoomForWs(ws);
+  if (!ctx) return;
+  const { room, playerId } = ctx;
+  const player = room.players.get(playerId);
+  if (!player) return;
+
+  roomManager.broadcastToRoom(
+    room,
+    createMessage(MessageType.CHAT_MESSAGE, {
+      playerId,
+      playerName: player.name,
+      colorIndex: player.colorIndex,
+      emoji: payload.emoji || null,
+      message: payload.message ? String(payload.message).slice(0, 50) : null,
+      timestamp: Date.now(),
+    })
+  );
+}
+
 // ─── Game Handlers ──────────────────────────────────────────────────
 function handleSelectGame(ws, payload) {
   const ctx = roomManager.getRoomForWs(ws);
@@ -232,8 +257,22 @@ function handleGameStart(ws, payload) {
   const gameId = room.selectedGameId || payload.gameId;
   if (!gameId) return;
 
+  const gameDef = getGameById(gameId);
+  if (!gameDef) {
+    ws.send(createMessage(MessageType.ROOM_ERROR, { error: 'Unknown game.' }));
+    return;
+  }
+
   // Get player list for the game
   const gamePlayers = room.getPlayersArray();
+  if (gamePlayers.length < gameDef.minPlayers) {
+    ws.send(
+      createMessage(MessageType.ROOM_ERROR, {
+        error: `At least ${gameDef.minPlayers} players needed to start ${gameDef.name}.`,
+      })
+    );
+    return;
+  }
 
   // Create game instance
   const broadcastFn = (message) => {
@@ -340,6 +379,15 @@ function handleTournamentSetup(ws, payload) {
 
   const { room, playerId } = ctx;
   if (playerId !== room.hostId) return;
+
+  if (room.players.size < 2) {
+    ws.send(
+      createMessage(MessageType.ROOM_ERROR, {
+        error: 'At least 2 players are needed for a tournament.',
+      })
+    );
+    return;
+  }
 
   const tournament = TournamentManager.createTournament({
     mode: payload.mode,

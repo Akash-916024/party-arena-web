@@ -23,6 +23,9 @@ const App = (() => {
             <span class="nav-title">Party Arena</span>
           </div>
           <div class="spacer"></div>
+          <button class="sound-toggle-btn" onclick="Sound.toggleMute()" title="Toggle Sound" style="margin-right:12px">
+            ${Sound.isMuted ? '🔇' : '🔊'}
+          </button>
           <div class="connection-status">
             <span class="status-dot ${Network.isConnected ? 'connected' : 'disconnected'}"></span>
             <span>${Network.isConnected ? 'Server Online' : 'Connecting...'}</span>
@@ -198,9 +201,13 @@ const App = (() => {
             <span class="nav-title">${gameInfo.name}</span>
           </div>
           <div class="spacer"></div>
+          <button class="sound-toggle-btn" onclick="Sound.toggleMute()" title="Toggle Sound" style="margin-right:12px">
+            ${Sound.isMuted ? '🔇' : '🔊'}
+          </button>
           <button class="btn btn-secondary btn-sm" onclick="Room.leaveRoom()" id="btn-quit-game">Leave</button>
         </div>
         <div id="game-mount-point" class="w-full flex-1 flex flex-col flex-center"></div>
+        <div class="mt-s w-full">${Reactions.renderEmoteBar()}</div>
       </div>
     `;
 
@@ -228,6 +235,12 @@ const App = (() => {
         break;
       case 'memory':
         activeGame = new MemoryGameRenderer(mount, players, localId);
+        break;
+      case 'tug-of-war':
+        activeGame = new TugOfWarGameRenderer(mount, players, localId);
+        break;
+      case 'bomb-tag':
+        activeGame = new BombTagGameRenderer(mount, players, localId);
         break;
       default:
         console.error('Unknown game ID:', params.gameId);

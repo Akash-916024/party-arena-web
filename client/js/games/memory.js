@@ -43,10 +43,18 @@ class MemoryGameRenderer extends BaseGameRenderer {
     if (this.state.matched[index] || this.state.revealed[index]) return;
     if (this.state.flippedCards && this.state.flippedCards.length >= 2) return;
 
+    Sound.playFlip();
     this.sendInput({ cardIndex: index });
   }
 
   onStateUpdate(state) {
+    if (this.state) {
+      const oldPairs = Object.values(this.state.pairs || {}).reduce((a, b) => a + b, 0);
+      const newPairs = Object.values(state.pairs || {}).reduce((a, b) => a + b, 0);
+      if (newPairs > oldPairs) {
+        Sound.playMatch();
+      }
+    }
     super.onStateUpdate(state);
     this.render();
   }

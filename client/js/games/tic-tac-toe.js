@@ -44,6 +44,7 @@ class TicTacToeGameRenderer extends BaseGameRenderer {
     }
     if (this.state.board[cellIndex] !== null) return;
 
+    Sound.playPieceDrop();
     this.sendInput({ cell: cellIndex });
   }
 

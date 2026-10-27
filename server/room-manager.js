@@ -46,6 +46,7 @@ class Room {
     this.state = RoomState.WAITING;
     this.maxPlayers = 8;
     this.players = new Map();
+    this.spectators = new Map();
     this.hostId = hostPlayer.id;
     this.selectedGameId = null;
     this.currentGame = null;
@@ -190,21 +191,32 @@ class RoomManager {
       return;
     }
 
-    if (room.isFull) {
+    // Check reconnection
+    if (payload.playerId && room.players.has(payload.playerId)) {
+      const existing = room.players.get(payload.playerId);
+      if (existing.disconnectTimer) {
+        clearTimeout(existing.disconnectTimer);
+        existing.disconnectTimer = null;
+      }
+      existing.ws = ws;
+      existing.isDisconnected = false;
+      this.playerRooms.set(payload.playerId, code);
+      this.wsToPlayer.set(ws, payload.playerId);
+
       ws.send(
-        createMessage(MessageType.ROOM_ERROR, { error: 'Room is full.' })
+        createMessage(MessageType.ROOM_JOINED, {
+          roomCode: code,
+          playerId: payload.playerId,
+          room: room.toLobbyJSON(),
+          isSpectator: false,
+        })
       );
+      this.broadcastLobbyUpdate(room);
       return;
     }
 
-    if (room.state !== RoomState.WAITING) {
-      ws.send(
-        createMessage(MessageType.ROOM_ERROR, {
-          error: 'Game already in progress.',
-        })
-      );
-      return;
-    }
+    // Determine if joining as spectator or active player
+    const isSpectator = room.isFull || room.state !== RoomState.WAITING;
 
     // Check if this colorIndex is already taken, auto-assign next available
     let colorIndex = payload.colorIndex || 0;
@@ -222,14 +234,19 @@ class RoomManager {
       colorIndex,
       ws
     );
+    player.isSpectator = isSpectator;
 
-    if (!room.addPlayer(player)) {
-      ws.send(
-        createMessage(MessageType.ROOM_ERROR, {
-          error: 'Could not join room.',
-        })
-      );
-      return;
+    if (isSpectator) {
+      room.spectators.set(playerId, player);
+    } else {
+      if (!room.addPlayer(player)) {
+        ws.send(
+          createMessage(MessageType.ROOM_ERROR, {
+            error: 'Could not join room.',
+          })
+        );
+        return;
+      }
     }
 
     this.playerRooms.set(playerId, code);
@@ -241,6 +258,7 @@ class RoomManager {
         roomCode: code,
         playerId: playerId,
         room: room.toLobbyJSON(),
+        isSpectator,
       })
     );
 
@@ -248,7 +266,7 @@ class RoomManager {
     this.broadcastLobbyUpdate(room);
 
     console.log(
-      `[Room] ${player.name} joined room ${code} (${room.playerCount}/${room.maxPlayers})`
+      `[Room] ${player.name} joined room ${code} as ${isSpectator ? 'spectator' : 'player'} (${room.playerCount}/${room.maxPlayers})`
     );
   }
 
@@ -266,8 +284,36 @@ class RoomManager {
     const room = this.rooms.get(roomCode);
     if (!room) return;
 
+    // Check if spectator
+    if (room.spectators.has(playerId)) {
+      room.spectators.delete(playerId);
+      this.playerRooms.delete(playerId);
+      this.wsToPlayer.delete(ws);
+      return;
+    }
+
     const player = room.players.get(playerId);
     const playerName = player ? player.name : 'Unknown';
+
+    // If game in progress, grant a 25-second reconnect grace period
+    if (room.state === RoomState.IN_GAME && player) {
+      player.isDisconnected = true;
+      this.wsToPlayer.delete(ws);
+
+      console.log(`[Room] ${playerName} disconnected during match. Holding slot for 25s...`);
+      player.disconnectTimer = setTimeout(() => {
+        if (player.isDisconnected) {
+          room.removePlayer(playerId);
+          this.playerRooms.delete(playerId);
+          if (room.playerCount === 0) {
+            this.rooms.delete(roomCode);
+          } else {
+            this.broadcastLobbyUpdate(room);
+          }
+        }
+      }, 25000);
+      return;
+    }
 
     room.removePlayer(playerId);
     this.playerRooms.delete(playerId);
@@ -395,6 +441,11 @@ class RoomManager {
         player.ws.send(msg);
       }
     }
+    for (const spectator of room.spectators.values()) {
+      if (spectator.ws && spectator.ws.readyState === 1) {
+        spectator.ws.send(msg);
+      }
+    }
   }
 
   /**
@@ -406,6 +457,11 @@ class RoomManager {
     for (const player of room.players.values()) {
       if (player.ws && player.ws.readyState === 1) {
         player.ws.send(message);
+      }
+    }
+    for (const spectator of room.spectators.values()) {
+      if (spectator.ws && spectator.ws.readyState === 1) {
+        spectator.ws.send(message);
       }
     }
   }

@@ -50,16 +50,21 @@ class ReactionGameRenderer extends BaseGameRenderer {
 
     if (roundState === 'waiting') {
       this.hasClickedThisRound = true;
+      Sound.playBuzzer();
       if (navigator.vibrate) navigator.vibrate(100);
       this.sendInput({ action: 'click' });
     } else if (roundState === 'signal') {
       this.hasClickedThisRound = true;
+      Sound.playClick();
       if (navigator.vibrate) navigator.vibrate([40, 40, 40]);
       this.sendInput({ action: 'click' });
     }
   }
 
   onStateUpdate(state) {
+    if (this.state && this.state.roundState !== 'signal' && state.roundState === 'signal') {
+      Sound.playCountdown(true);
+    }
     super.onStateUpdate(state);
 
     if (state.currentRound !== this.lastRoundNumber) {

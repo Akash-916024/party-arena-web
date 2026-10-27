@@ -18,6 +18,8 @@ const Room = (() => {
     { id: 'reaction', name: 'Reaction Speed', description: 'Click the fastest when the signal appears!', icon: '⚡', minPlayers: 2, maxPlayers: 8, type: 'simultaneous', color: '#FF9800' },
     { id: 'connect-four', name: 'Connect Four', description: 'Drop discs and get four in a row!', icon: '🔴', minPlayers: 2, maxPlayers: 2, type: 'turnbased', color: '#F44336' },
     { id: 'memory', name: 'Memory Match', description: 'Flip cards and find matching pairs!', icon: '🧠', minPlayers: 2, maxPlayers: 4, type: 'turnbased', color: '#9C27B0' },
+    { id: 'tug-of-war', name: 'Tug of War', description: 'Rapid tap masher! Pull the rope across the center line.', icon: '🪢', minPlayers: 2, maxPlayers: 2, type: 'realtime', color: '#E91E63' },
+    { id: 'bomb-tag', name: 'Bomb Tag', description: 'Pass the ticking bomb before it explodes! Last survivor wins.', icon: '💣', minPlayers: 2, maxPlayers: 8, type: 'realtime', color: '#FF5722' },
   ];
 
   // ─── Load saved profile ─────────────────────────────────────────
@@ -62,10 +64,12 @@ const Room = (() => {
     });
 
     Network.on(Network.MessageType.GAME_COUNTDOWN, (data) => {
+      Sound.playCountdown(data.seconds === 0);
       UI.showCountdown(data.seconds);
     });
 
     Network.on(Network.MessageType.GAME_START, (data) => {
+      Sound.playCountdown(true);
       App.navigate('game', {
         gameId: data.gameId,
         players: data.players,
@@ -73,6 +77,7 @@ const Room = (() => {
     });
 
     Network.on(Network.MessageType.GAME_END, (data) => {
+      Sound.playWin();
       App.navigate('results', data);
     });
 
@@ -187,6 +192,9 @@ const Room = (() => {
           <button class="nav-back" onclick="Room.leaveRoom()" id="btn-leave-room">←</button>
           <span class="nav-title">${UI.escapeHTML(currentRoom.roomName || 'Party Room')}</span>
           <div class="spacer"></div>
+          <button class="sound-toggle-btn mr-s" onclick="Sound.toggleMute()" title="Toggle Sound">
+            ${Sound.isMuted ? '🔇' : '🔊'}
+          </button>
           <div class="connection-status">
             <span class="status-dot ${Network.isConnected ? 'connected' : 'disconnected'}"></span>
             <span>${Network.isConnected ? 'Connected' : 'Disconnected'}</span>
@@ -270,6 +278,11 @@ const Room = (() => {
                      </div>`
                   : '<div class="card"><div class="body-md text-center">Waiting for host to select a game...</div></div>'}
             </div>
+          </div>
+
+          <!-- Social Emotes -->
+          <div class="mt-l">
+            ${Reactions.renderEmoteBar()}
           </div>
         </div>
       </div>

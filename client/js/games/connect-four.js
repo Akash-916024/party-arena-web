@@ -47,6 +47,7 @@ class ConnectFourGameRenderer extends BaseGameRenderer {
       return;
     }
 
+    Sound.playPieceDrop();
     this.sendInput({ col });
   }
 

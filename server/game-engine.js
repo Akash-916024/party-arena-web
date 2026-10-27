@@ -58,6 +58,26 @@ const GAMES = {
     type: 'turnbased',
     color: '#9C27B0',
   },
+  'tug-of-war': {
+    id: 'tug-of-war',
+    name: 'Tug of War',
+    description: 'Rapid tap masher! Pull the rope across the center line.',
+    icon: '🪢',
+    minPlayers: 2,
+    maxPlayers: 2,
+    type: 'realtime',
+    color: '#E91E63',
+  },
+  'bomb-tag': {
+    id: 'bomb-tag',
+    name: 'Bomb Tag',
+    description: 'Pass the ticking bomb before it explodes! Last survivor wins.',
+    icon: '💣',
+    minPlayers: 2,
+    maxPlayers: 8,
+    type: 'realtime',
+    color: '#FF5722',
+  },
 };
 
 function getAllGames() {
@@ -157,10 +177,13 @@ class PongGame extends BaseGame {
     this.winScore = 7;
     this.baseSpeed = 5;
 
+    const p1Id = players[0]?.id || 'p1';
+    const p2Id = players[1]?.id || 'p2';
+
     // Paddle positions (Y center)
     this.paddles = {
-      [players[0].id]: this.canvasHeight / 2,
-      [players[1].id]: this.canvasHeight / 2,
+      [p1Id]: this.canvasHeight / 2,
+      [p2Id]: this.canvasHeight / 2,
     };
 
     // Ball state
@@ -172,8 +195,8 @@ class PongGame extends BaseGame {
     };
 
     this.playerSide = {
-      [players[0].id]: 'left',
-      [players[1].id]: 'right',
+      [p1Id]: 'left',
+      [p2Id]: 'right',
     };
   }
 
@@ -317,11 +340,14 @@ class TicTacToeGame extends BaseGame {
   constructor(players, broadcastFn) {
     super('tic-tac-toe', players, broadcastFn);
 
+    const p1Id = players[0]?.id || 'p1';
+    const p2Id = players[1]?.id || 'p2';
+
     this.board = Array(9).fill(null); // null, 'X', or 'O'
     this.currentTurn = 0; // Index into this.players
     this.playerSymbol = {
-      [players[0].id]: 'X',
-      [players[1].id]: 'O',
+      [p1Id]: 'X',
+      [p2Id]: 'O',
     };
     this.winner = null;
     this.isDraw = false;
@@ -527,10 +553,13 @@ class ConnectFourGame extends BaseGame {
     this.board = Array.from({ length: this.cols }, () =>
       Array(this.rows).fill(null)
     );
+    const p1Id = players[0]?.id || 'p1';
+    const p2Id = players[1]?.id || 'p2';
+
     this.currentTurn = 0;
     this.playerDisc = {
-      [players[0].id]: 'red',
-      [players[1].id]: 'yellow',
+      [p1Id]: 'red',
+      [p2Id]: 'yellow',
     };
     this.winner = null;
     this.winningCells = null;
@@ -755,6 +784,232 @@ class MemoryGame extends BaseGame {
   }
 }
 
+// ─── Tug of War Game ────────────────────────────────────────────────
+class TugOfWarGame extends BaseGame {
+  constructor(players, broadcastFn) {
+    super('tug-of-war', players, broadcastFn);
+
+    this.ropePosition = 0; // -100 to +100
+    this.targetScore = 100;
+    this.pullPower = 3.8;
+    this.decay = 0.93;
+    this.velocity = 0;
+    const p1Id = players[0]?.id || 'p1';
+    const p2Id = players[1]?.id || 'p2';
+
+    this.pullCount = {
+      [p1Id]: 0,
+      [p2Id]: 0,
+    };
+    this.playerSide = {
+      [p1Id]: 'left',
+      [p2Id]: 'right',
+    };
+  }
+
+  start() {
+    this.tickInterval = setInterval(() => this.tick(), 1000 / 30);
+    this.broadcastState();
+  }
+
+  handleInput(playerId, input) {
+    if (this.isOver) return;
+    if (input.action === 'pull') {
+      const side = this.playerSide[playerId];
+      if (side === 'left') {
+        this.velocity -= this.pullPower;
+        this.pullCount[playerId]++;
+      } else if (side === 'right') {
+        this.velocity += this.pullPower;
+        this.pullCount[playerId]++;
+      }
+    }
+  }
+
+  tick() {
+    if (this.isOver) return;
+
+    this.ropePosition += this.velocity;
+    this.velocity *= this.decay;
+
+    // Boundary / Win checks
+    if (this.ropePosition <= -this.targetScore) {
+      this.ropePosition = -this.targetScore;
+      this.scores[this.players[0].id] = 1;
+      this.broadcastState();
+      this.end();
+      return;
+    } else if (this.ropePosition >= this.targetScore) {
+      this.ropePosition = this.targetScore;
+      this.scores[this.players[1].id] = 1;
+      this.broadcastState();
+      this.end();
+      return;
+    }
+
+    this.broadcastState();
+  }
+
+  getState() {
+    return {
+      ...super.getState(),
+      ropePosition: Math.round(this.ropePosition * 10) / 10,
+      targetScore: this.targetScore,
+      pullCount: this.pullCount,
+      playerSide: this.playerSide,
+    };
+  }
+}
+
+// ─── Bomb Tag Game ──────────────────────────────────────────────────
+class BombTagGame extends BaseGame {
+  constructor(players, broadcastFn) {
+    super('bomb-tag', players, broadcastFn);
+
+    this.arenaWidth = 800;
+    this.arenaHeight = 500;
+    this.playerRadius = 18;
+
+    this.activePlayerIds = new Set(players.map((p) => p.id));
+    this.positions = {};
+    this.velocities = {};
+    this.bombHolder = null;
+    this.bombTimer = 15;
+    this.lastTagTime = 0;
+    this.tagCooldownMs = 1200;
+    this.round = 1;
+
+    this.setupRound();
+  }
+
+  setupRound() {
+    const pList = Array.from(this.activePlayerIds);
+    const count = pList.length;
+    const angleStep = (Math.PI * 2) / count;
+    const radius = 170;
+
+    pList.forEach((pid, i) => {
+      this.positions[pid] = {
+        x: this.arenaWidth / 2 + Math.cos(i * angleStep) * radius,
+        y: this.arenaHeight / 2 + Math.sin(i * angleStep) * radius,
+      };
+      this.velocities[pid] = { x: 0, y: 0 };
+    });
+
+    this.bombHolder = pList[Math.floor(Math.random() * count)];
+    this.bombTimer = Math.max(10, 15 - (this.players.length - count) * 2);
+    this.lastTagTime = Date.now();
+  }
+
+  start() {
+    this.tickInterval = setInterval(() => this.tick(), 1000 / 30);
+    this.broadcastState();
+  }
+
+  handleInput(playerId, input) {
+    if (this.isOver || !this.activePlayerIds.has(playerId)) return;
+
+    if (typeof input.vx === 'number' && typeof input.vy === 'number') {
+      const speed = playerId === this.bombHolder ? 6.2 : 5.4;
+      const len = Math.sqrt(input.vx ** 2 + input.vy ** 2) || 1;
+      this.velocities[playerId] = {
+        x: (input.vx / len) * speed,
+        y: (input.vy / len) * speed,
+      };
+    } else if (typeof input.targetX === 'number' && typeof input.targetY === 'number') {
+      const pos = this.positions[playerId];
+      const dx = input.targetX - pos.x;
+      const dy = input.targetY - pos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > 8) {
+        const speed = playerId === this.bombHolder ? 6.2 : 5.4;
+        this.velocities[playerId] = {
+          x: (dx / dist) * speed,
+          y: (dy / dist) * speed,
+        };
+      } else {
+        this.velocities[playerId] = { x: 0, y: 0 };
+      }
+    }
+  }
+
+  tick() {
+    if (this.isOver) return;
+
+    this.bombTimer -= 1 / 30;
+
+    // Movement & boundary clamp
+    for (const pid of this.activePlayerIds) {
+      const pos = this.positions[pid];
+      const vel = this.velocities[pid] || { x: 0, y: 0 };
+
+      pos.x += vel.x;
+      pos.y += vel.y;
+
+      vel.x *= 0.94;
+      vel.y *= 0.94;
+
+      const r = this.playerRadius;
+      pos.x = Math.max(r + 15, Math.min(this.arenaWidth - r - 15, pos.x));
+      pos.y = Math.max(r + 15, Math.min(this.arenaHeight - r - 15, pos.y));
+    }
+
+    // Tag collision
+    const now = Date.now();
+    if (now - this.lastTagTime > this.tagCooldownMs && this.bombHolder) {
+      const holderPos = this.positions[this.bombHolder];
+      if (holderPos) {
+        for (const pid of this.activePlayerIds) {
+          if (pid === this.bombHolder) continue;
+          const otherPos = this.positions[pid];
+          const dist = Math.hypot(holderPos.x - otherPos.x, holderPos.y - otherPos.y);
+          if (dist < this.playerRadius * 2 + 6) {
+            this.bombHolder = pid;
+            this.lastTagTime = now;
+            break;
+          }
+        }
+      }
+    }
+
+    // Explosion
+    if (this.bombTimer <= 0) {
+      const eliminatedPlayer = this.bombHolder;
+      this.activePlayerIds.delete(eliminatedPlayer);
+
+      const remaining = this.activePlayerIds.size;
+      this.scores[eliminatedPlayer] = this.players.length - remaining - 1;
+
+      if (remaining <= 1) {
+        const lastWinner = Array.from(this.activePlayerIds)[0] || eliminatedPlayer;
+        this.scores[lastWinner] = this.players.length;
+        this.broadcastState();
+        this.end();
+        return;
+      } else {
+        this.round++;
+        this.setupRound();
+      }
+    }
+
+    this.broadcastState();
+  }
+
+  getState() {
+    return {
+      ...super.getState(),
+      arenaWidth: this.arenaWidth,
+      arenaHeight: this.arenaHeight,
+      playerRadius: this.playerRadius,
+      positions: this.positions,
+      bombHolder: this.bombHolder,
+      bombTimer: Math.max(0, Math.round(this.bombTimer * 10) / 10),
+      activePlayers: Array.from(this.activePlayerIds),
+      round: this.round,
+    };
+  }
+}
+
 // ─── Game Factory ───────────────────────────────────────────────────
 function createGame(gameId, players, broadcastFn) {
   switch (gameId) {
@@ -768,6 +1023,10 @@ function createGame(gameId, players, broadcastFn) {
       return new ConnectFourGame(players, broadcastFn);
     case 'memory':
       return new MemoryGame(players, broadcastFn);
+    case 'tug-of-war':
+      return new TugOfWarGame(players, broadcastFn);
+    case 'bomb-tag':
+      return new BombTagGame(players, broadcastFn);
     default:
       return null;
   }
@@ -779,4 +1038,6 @@ module.exports = {
   getGameById,
   createGame,
   BaseGame,
+  TugOfWarGame,
+  BombTagGame,
 };
