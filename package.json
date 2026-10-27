@@ -1,0 +1,20 @@
+{
+  "name": "party-arena-web",
+  "version": "1.0.0",
+  "description": "Party Arena Web — Real-time multiplayer mini-games in your browser",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node --watch server/server.js",
+    "install:server": "cd server && npm install"
+  },
+  "keywords": [
+    "multiplayer",
+    "games",
+    "party-games",
+    "websocket",
+    "html5-canvas",
+    "browser-games"
+  ],
+  "author": "",
+  "license": "MIT"
+}

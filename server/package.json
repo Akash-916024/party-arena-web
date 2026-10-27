@@ -1,0 +1,19 @@
+{
+  "name": "party-arena-web-server",
+  "version": "1.0.0",
+  "description": "WebSocket server for Party Arena Web — multiplayer browser game platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": ["multiplayer", "games", "websocket", "party"],
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0",
+    "uuid": "^11.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
