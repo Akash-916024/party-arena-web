@@ -32,6 +32,10 @@ Inspired by the native Party Arena mobile app, rewritten as a lightweight, serve
   - **Individual Points**: Points scored across a playlist of games (1st: 3pts, 2nd: 2pts, 3rd: 1pt).
   - **Team Battle**: 2 teams clash across matches.
   - **Knockout**: Bracket elimination format.
+- **👤 Persistent Profile & Progression**: Track total matches, win streaks, per-game records, tournament trophies (🥇 Gold, 🥈 Silver, 🥉 Bronze), customizable gamer avatars, and milestone titles (*Rookie* up to *Legendary*).
+- **🎨 Visual Theme Engine**: Instant runtime theme switching between **⚡ Cyberpunk** (electric cyan/violet), **🕹️ Retro Arcade** (phosphor neon green/amber), and **🌌 Midnight OLED** (true black).
+- **🔊 Audio & Settings Control**: Fine-tuned master volume slider, SFX toggles, and dynamic server endpoint switcher.
+- **🛡️ Cold-Start Resilience**: Built-in cold-start countdown banner and auto-reconnect designed for Render's free tier idle spin-up.
 - **Automated CI/CD**: GitHub Actions workflow automatically deploys `/client` to GitHub Pages on every push to `main`.
 - **Aesthetic UI**: Premium dark glassmorphism design system inspired by Apple HIG and cyberpunk arcades, with custom typography (Outfit & Inter), smooth micro-animations, and haptic feedback.
 
@@ -48,7 +52,7 @@ Inspired by the native Party Arena mobile app, rewritten as a lightweight, serve
 │  Browser 2 (Player)   │ ◄────────────────────────► │  • RoomManager (Rooms & Codes)    │
 └───────────────────────┘                            │  • GameEngine (Server Game Loop)  │
                                                      │  • TournamentManager              │
-┌───────────────────────┐         WebSocket          │                                   │
+┌───────────────────────┐         WebSocket          │  • /health & /api/rooms Endpoints │
 │  Browser 3..N         │ ◄────────────────────────► │                                   │
 └───────────────────────┘                            └───────────────────────────────────┘
 ```
@@ -96,27 +100,30 @@ It automatically serves both the **WebSocket server** (at `ws://localhost:3000`)
 ## 🌐 Free Cloud Deployment
 
 ### Step 1: Deploy WebSocket Backend (Render.com — 100% Free)
-1. Fork or push this repository to GitHub.
-2. Sign up on [Render.com](https://render.com).
-3. Click **New +** > **Web Service**.
-4. Connect your GitHub repository.
-5. Configure the settings:
+
+#### Option A: 1-Click Blueprint (Recommended)
+1. Fork or push this repository to your GitHub account.
+2. Sign in to [Render.com](https://render.com).
+3. Click **New +** > **Blueprint**.
+4. Connect this repository — Render will automatically read [`render.yaml`](render.yaml) and configure the Node web service with `/health` monitoring!
+
+#### Option B: Manual Web Service
+1. In Render, click **New +** > **Web Service**.
+2. Connect your repository and configure:
    - **Root Directory**: `server`
    - **Environment**: `Node`
    - **Build Command**: `npm install`
    - **Start Command**: `node server.js`
    - **Plan**: `Free`
-6. Click **Create Web Service**. Render will assign you a live URL like:
-   `https://party-arena-web.onrender.com` (WebSocket: `wss://party-arena-web.onrender.com`)
+3. Click **Create Web Service**. Render will assign you a live URL like:
+   `https://party-arena-server.onrender.com` (WebSocket: `wss://party-arena-server.onrender.com`).
 
 ### Step 2: Deploy Frontend (GitHub Pages — 100% Free)
-1. In `client/js/network.js`, update line 223 with your Render WebSocket URL:
-   ```javascript
-   return 'wss://your-service-name.onrender.com';
-   ```
+1. In `client/js/network.js`, update line 245 with your Render WebSocket URL, or simply set it inside the in-app **⚙️ Settings** modal.
 2. In your GitHub repository settings:
    - Navigate to **Settings** > **Pages**.
-   - Under **Build and deployment** > **Branch**, select your branch and `/client` folder (or push `client/` contents to a `gh-pages` branch).
+   - Under **Build and deployment** > **Source**, select **GitHub Actions**.
+   - The included workflow `.github/workflows/deploy-pages.yml` will automatically deploy the frontend on every push!
 3. Your game is now live and playable by anyone worldwide!
 
 ---
@@ -125,36 +132,49 @@ It automatically serves both the **WebSocket server** (at `ws://localhost:3000`)
 
 ```
 party-arena-web/
+├── render.yaml                  # Render 1-click cloud deployment blueprint
 ├── client/                      # Frontend (Static site for GitHub Pages)
 │   ├── index.html               # Main application shell
+│   ├── manifest.json            # PWA manifest
+│   ├── sw.js                    # Service Worker offline cache
 │   ├── css/
-│   │   └── styles.css           # Complete design system & game CSS
+│   │   └── styles.css           # Design system, themes & game CSS
 │   ├── js/
 │   │   ├── app.js               # Application router & screens
+│   │   ├── profile.js           # Player stats, avatars, trophies & progression
+│   │   ├── settings.js          # Audio volume, themes & server switcher
 │   │   ├── network.js           # WebSocket client with auto-reconnect
 │   │   ├── room.js              # Lobby, room codes & player states
 │   │   ├── tournament.js        # Tournament client state & bracket
-│   │   ├── ui.js                # Toasts, modals, avatars & utilities
+│   │   ├── ui.js                # Modals, player inspect, avatars & toasts
+│   │   ├── chat.js              # In-lobby live slide-out text chat
+│   │   ├── reactions.js         # Floating emoji reactions & quick-chat
+│   │   ├── public-rooms.js      # Live public room browser
+│   │   ├── qrcode-helper.js     # QR code invite generator
 │   │   └── games/
 │   │       ├── base-game.js     # Base game renderer class
 │   │       ├── pong.js          # Pong real-time canvas renderer
 │   │       ├── tic-tac-toe.js   # Tic-Tac-Toe interactive grid
 │   │       ├── reaction.js      # Reaction Speed reflex zone
 │   │       ├── connect-four.js  # Connect Four gravity grid
-│   │       └── memory.js        # Memory Match 3D card flips
+│   │       ├── memory.js        # Memory Match 3D card flips
+│   │       ├── tug-of-war.js    # Tug of War button-masher
+│   │       └── bomb-tag.js      # Bomb Tag arena tag
 │   └── assets/                  # Icons & optional assets
 │
 ├── server/                      # Backend (Node.js WebSocket Server)
-│   ├── server.js                # Main server & static file host
-│   ├── room-manager.js          # Room lifecycle, codes & players
+│   ├── server.js                # Main server, /health & static file host
+│   ├── room-manager.js          # Room lifecycle, spectator & player sync
 │   ├── game-engine.js           # Authoritative game loops & logic
 │   ├── tournament-manager.js    # Tournament progression state machine
 │   ├── protocol.js              # Shared message contracts
 │   └── package.json             # Server dependencies (ws, uuid)
 │
+├── .github/workflows/           # GitHub Actions Pages deployment
 ├── .gitignore
 ├── package.json                 # Root launcher scripts
 └── README.md                    # Project documentation
+```
 ```
 
 ---

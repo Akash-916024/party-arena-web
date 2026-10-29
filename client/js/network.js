@@ -65,17 +65,31 @@ const Network = (() => {
       serverUrl = url;
       reconnectAttempts = 0;
 
+      // Detect cold-start delay (e.g. Render free tier spinning up)
+      const coldStartTimer = setTimeout(() => {
+        if (!isConnected) {
+          emit('coldStart', {
+            isColdStart: true,
+            serverUrl: url,
+            message: 'Server may be waking up from sleep (~20–30s on free hosting). Please wait...'
+          });
+        }
+      }, 2500);
+
       try {
         ws = new WebSocket(url);
       } catch (err) {
+        clearTimeout(coldStartTimer);
         reject(new Error('Failed to create WebSocket connection'));
         return;
       }
 
       ws.onopen = () => {
+        clearTimeout(coldStartTimer);
         isConnected = true;
         reconnectAttempts = 0;
         console.log('[Network] Connected to', url);
+        emit('coldStart', { isColdStart: false });
         emit('connectionChange', { connected: true });
         resolve();
       };
@@ -211,6 +225,12 @@ const Network = (() => {
 
   // ─── Auto-detect server URL ─────────────────────────────────────
   function getDefaultServerUrl() {
+    // Custom configured URL takes precedence
+    const custom = localStorage.getItem('party_custom_server_url');
+    if (custom && custom.trim().length > 0) {
+      return custom.trim();
+    }
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname;
     const port = window.location.port || (protocol === 'wss:' ? '443' : '80');
@@ -222,12 +242,23 @@ const Network = (() => {
       host.includes('netlify.app') ||
       host.includes('vercel.app')
     ) {
-      // TODO: Replace with your actual Render deployment URL
-      return 'wss://party-arena-web.onrender.com';
+      return 'wss://party-arena-server.onrender.com';
     }
 
     // Local development
     return `${protocol}//${host}:${port}`;
+  }
+
+  function getServerUrl() {
+    return serverUrl || getDefaultServerUrl();
+  }
+
+  function setCustomServerUrl(newUrl) {
+    if (newUrl) {
+      localStorage.setItem('party_custom_server_url', newUrl.trim());
+      disconnect();
+      connect(newUrl.trim()).catch(() => {});
+    }
   }
 
   return {
@@ -239,6 +270,8 @@ const Network = (() => {
     off,
     removeAllListeners,
     getDefaultServerUrl,
+    getServerUrl,
+    setCustomServerUrl,
     get isConnected() { return isConnected; },
   };
 })();

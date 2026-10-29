@@ -78,6 +78,12 @@ const Room = (() => {
 
     Network.on(Network.MessageType.GAME_END, (data) => {
       Sound.playWin();
+      if (typeof Profile !== 'undefined') {
+        const gameId = (currentRoom && currentRoom.selectedGameId) || data.gameId || 'game';
+        const gameInfo = GAMES.find((g) => g.id === gameId);
+        const won = data.winnerId === localPlayerId;
+        Profile.recordMatchResult(gameId, gameInfo ? gameInfo.name : gameId, won);
+      }
       App.navigate('results', data);
     });
 
@@ -88,6 +94,12 @@ const Room = (() => {
 
     Network.on(Network.MessageType.TOURNAMENT_END, (data) => {
       TournamentClient.setTournament(data);
+      if (typeof Profile !== 'undefined' && data.standings) {
+        const myIndex = data.standings.findIndex((s) => s.playerId === localPlayerId || s.name === localPlayerName);
+        if (myIndex >= 0) {
+          Profile.recordTournamentResult(myIndex + 1);
+        }
+      }
       App.navigate('tournament-results', data);
     });
 
@@ -103,9 +115,11 @@ const Room = (() => {
       App.navigate('profile', { returnTo: 'create' });
       return;
     }
+    const avatar = typeof Profile !== 'undefined' ? Profile.getProfile().avatar : '👾';
     Network.send(Network.MessageType.CREATE_ROOM, {
       name: localPlayerName,
       colorIndex: localColorIndex,
+      avatar: avatar,
     });
   }
 
@@ -115,10 +129,12 @@ const Room = (() => {
       App.navigate('profile', { returnTo: 'join', roomCode: code });
       return;
     }
+    const avatar = typeof Profile !== 'undefined' ? Profile.getProfile().avatar : '👾';
     Network.send(Network.MessageType.JOIN_ROOM, {
       roomCode: code.toUpperCase(),
       name: localPlayerName,
       colorIndex: localColorIndex,
+      avatar: avatar,
     });
   }
 

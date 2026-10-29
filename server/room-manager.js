@@ -13,10 +13,11 @@ const {
 } = require('./protocol');
 
 class Player {
-  constructor(id, name, colorIndex, ws) {
+  constructor(id, name, colorIndex, ws, avatar = '👾') {
     this.id = id;
     this.name = name;
     this.colorIndex = colorIndex;
+    this.avatar = avatar;
     this.isHost = false;
     this.isReady = false;
     this.ws = ws; // WebSocket connection reference
@@ -30,6 +31,7 @@ class Player {
       id: this.id,
       name: this.name,
       colorIndex: this.colorIndex,
+      avatar: this.avatar,
       isHost: this.isHost,
       isReady: this.isReady,
       score: this.score,
@@ -161,7 +163,8 @@ class RoomManager {
       playerId,
       payload.name || 'Player',
       payload.colorIndex || 0,
-      ws
+      ws,
+      payload.avatar || '👾'
     );
 
     const room = new Room(player);
@@ -250,7 +253,8 @@ class RoomManager {
       playerId,
       payload.name || 'Player',
       colorIndex,
-      ws
+      ws,
+      payload.avatar || '👾'
     );
     player.isSpectator = isSpectator;
 

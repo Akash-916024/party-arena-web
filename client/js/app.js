@@ -11,7 +11,8 @@ const App = (() => {
 
   function renderHome() {
     Room.loadProfile();
-    const name = Room.localPlayerName || 'Player';
+    const userProfile = typeof Profile !== 'undefined' ? Profile.getProfile() : { name: 'Player', avatar: '👾', matchesWon: 0, trophies: { gold: 0 } };
+    const name = userProfile.name || Room.localPlayerName || 'Player';
     const color = UI.getPlayerColor(Room.localColorIndex);
 
     const app = document.getElementById('app');
@@ -23,12 +24,18 @@ const App = (() => {
             <span class="nav-title">Party Arena</span>
           </div>
           <div class="spacer"></div>
-          <button class="sound-toggle-btn" onclick="Sound.toggleMute()" title="Toggle Sound" style="margin-right:12px">
+          <button class="btn btn-icon btn-secondary mr-s" onclick="Profile.showProfileModal()" title="Player Profile & Stats" id="btn-open-profile" style="font-size:1.1rem;padding:6px 10px">
+            👤
+          </button>
+          <button class="btn btn-icon btn-secondary mr-s" onclick="Settings.showSettingsModal()" title="Settings & Audio" id="btn-open-settings" style="font-size:1.1rem;padding:6px 10px">
+            ⚙️
+          </button>
+          <button class="sound-toggle-btn mr-s" onclick="Sound.toggleMute()" title="Toggle Sound">
             ${Sound.isMuted ? '🔇' : '🔊'}
           </button>
           <div class="connection-status">
             <span class="status-dot ${Network.isConnected ? 'connected' : 'disconnected'}"></span>
-            <span>${Network.isConnected ? 'Server Online' : 'Connecting...'}</span>
+            <span id="nav-connection-text">${Network.isConnected ? 'Server Online' : 'Connecting...'}</span>
           </div>
         </div>
 
@@ -37,16 +44,30 @@ const App = (() => {
           <h1 class="hero-title">PARTY ARENA</h1>
           <p class="hero-subtitle">Fast, competitive multiplayer mini-games in your browser</p>
 
-          <!-- Player profile pill -->
-          <div class="card p-m mb-l flex flex-center gap-m" style="cursor:pointer;max-width:320px;margin-left:auto;margin-right:auto" onclick="App.navigate('profile')">
-            <div class="player-avatar" style="background:${color};width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.2rem">
-              ${name[0].toUpperCase()}
+          <!-- Player profile pill with progression -->
+          <div class="card p-m mb-l flex flex-center gap-m cursor-pointer" style="max-width:340px;margin-left:auto;margin-right:auto;border:1px solid rgba(255,255,255,0.12)" onclick="Profile.showProfileModal()" id="btn-player-profile-card">
+            <div class="player-avatar" style="background:${color};width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.6rem">
+              ${userProfile.avatar || '👾'}
             </div>
             <div style="text-align:left;flex:1">
-              <div class="heading-xs" style="color:var(--text-primary)">${UI.escapeHTML(name)}</div>
-              <div class="body-sm text-muted">Tap to customize avatar</div>
+              <div class="flex items-center gap-xs">
+                <span class="heading-xs" style="color:var(--text-primary)">${UI.escapeHTML(name)}</span>
+                <span class="badge" style="font-size:0.7rem;background:rgba(255,215,0,0.15);color:#FFD700;border:1px solid rgba(255,215,0,0.3)">${Profile.getTitle(userProfile.matchesWon)}</span>
+              </div>
+              <div class="body-sm text-muted">Wins: ${userProfile.matchesWon || 0} | Trophies: 🥇${userProfile.trophies?.gold || 0}</div>
             </div>
             <span style="color:var(--accent);font-size:1.2rem">✎</span>
+          </div>
+
+          <!-- Cold-start / Server Connecting Alert -->
+          <div id="cloud-connecting-banner" class="card p-m mb-m hidden" style="background:rgba(255,183,3,0.12);border:1px solid rgba(255,183,3,0.3);text-align:left;max-width:440px;margin-left:auto;margin-right:auto">
+            <div class="flex items-center gap-s mb-xs">
+              <span class="pulse-indicator">⏳</span>
+              <strong style="color:#FFB703">Waking up free cloud backend...</strong>
+            </div>
+            <div class="body-sm text-muted">
+              Free cloud servers sleep when idle and take ~20-30s to wake up on the first connection. The page will automatically connect as soon as it's ready.
+            </div>
           </div>
 
           <!-- PWA Install Banner -->
@@ -370,6 +391,24 @@ const App = (() => {
     Network.on(Network.MessageType.GAME_STATE, (state) => {
       if (activeGame) {
         activeGame.onStateUpdate(state);
+      }
+    });
+
+    Network.on('coldStart', (data) => {
+      const banner = document.getElementById('cloud-connecting-banner');
+      if (banner) {
+        banner.classList.toggle('hidden', !data.isColdStart);
+      }
+    });
+
+    Network.on('connectionChange', (data) => {
+      const banner = document.getElementById('cloud-connecting-banner');
+      if (banner && data.connected) {
+        banner.classList.add('hidden');
+      }
+      const navText = document.getElementById('nav-connection-text');
+      if (navText) {
+        navText.textContent = data.connected ? 'Server Online' : 'Connecting...';
       }
     });
 

@@ -92,25 +92,31 @@ const UI = (() => {
     return PLAYER_COLOR_NAMES[colorIndex % PLAYER_COLOR_NAMES.length];
   }
 
-  function renderPlayerAvatar(name, colorIndex) {
+  function renderPlayerAvatar(name, colorIndex, avatarChar) {
     const color = getPlayerColor(colorIndex);
-    const initial = name ? name[0].toUpperCase() : '?';
-    return `<div class="player-avatar" style="background: ${color}">${initial}</div>`;
+    const content = avatarChar || (name ? name[0].toUpperCase() : '?');
+    return `<div class="player-avatar" style="background: ${color}">${content}</div>`;
   }
 
   function renderPlayerItem(player, isLocal = false, showKick = false) {
     const readyClass = player.isReady ? 'ready' : 'not-ready';
     const readyText = player.isReady ? '✓ Ready' : 'Not Ready';
+    const title = typeof Profile !== 'undefined' ? Profile.getTitle(player.wins || 0) : '';
 
     return `
-      <div class="player-item" id="player-${player.id}">
-        ${renderPlayerAvatar(player.name, player.colorIndex)}
+      <div class="player-item cursor-pointer" id="player-${player.id}" onclick="Profile.showPlayerInspectModal({ name: '${escapeHTML(player.name)}', avatar: '${player.avatar || '👾'}', isHost: ${Boolean(player.isHost)}, isReady: ${Boolean(player.isReady)}, wins: ${player.wins || 0} })" title="Click to view player stats">
+        ${renderPlayerAvatar(player.name, player.colorIndex, player.avatar)}
         <div style="flex:1">
-          <div class="player-name">${escapeHTML(player.name)}${isLocal ? ' (You)' : ''}</div>
-          ${player.isHost ? '<div class="player-host-badge">★ HOST</div>' : ''}
+          <div class="player-name">
+            ${escapeHTML(player.name)}${isLocal ? ' <span class="badge" style="font-size:0.7rem;background:rgba(0,240,255,0.2);color:#00F0FF">You</span>' : ''}
+          </div>
+          <div class="flex items-center gap-xs">
+            ${player.isHost ? '<div class="player-host-badge">★ HOST</div>' : ''}
+            ${title ? `<span class="body-sm text-muted" style="font-size:0.75rem">${title}</span>` : ''}
+          </div>
         </div>
         <span class="player-ready-badge ${readyClass}">${readyText}</span>
-        ${showKick && !player.isHost ? `<button class="btn btn-sm btn-secondary" onclick="Room.kickPlayer('${player.id}')">✕</button>` : ''}
+        ${showKick && !player.isHost ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); Room.kickPlayer('${player.id}')">✕</button>` : ''}
       </div>
     `;
   }

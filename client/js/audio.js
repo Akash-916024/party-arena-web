@@ -39,6 +39,16 @@ const Sound = (() => {
     return isMuted;
   }
 
+  function setMasterVolume(vol) {
+    const val = Math.max(0, Math.min(1, vol));
+    isMuted = val === 0;
+    const c = getContext();
+    if (masterGain && c) {
+      masterGain.gain.setValueAtTime(val * 0.4, c.currentTime);
+    }
+    updateMuteIcons();
+  }
+
   function updateMuteIcons() {
     const icons = document.querySelectorAll('.sound-toggle-btn');
     icons.forEach((btn) => {
@@ -338,6 +348,7 @@ const Sound = (() => {
   return {
     init,
     toggleMute,
+    setMasterVolume,
     updateMuteIcons,
     playClick,
     playPaddleHit,
