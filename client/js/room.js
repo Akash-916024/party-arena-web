@@ -171,6 +171,43 @@ const Room = (() => {
     Network.send(Network.MessageType.KICK_PLAYER, { targetPlayerId });
   }
 
+  function showAddBotModal() {
+    UI.showModal(`
+      <div class="p-s text-center">
+        <div class="heading-md mb-s">🤖 Add AI Bot Opponent</div>
+        <p class="body-sm text-muted mb-m">Choose the difficulty tier for the AI player:</p>
+        <div class="flex-col gap-s mb-l">
+          <button class="btn btn-secondary w-full flex items-center justify-between p-m" onclick="Room.addBot('easy')">
+            <span style="font-weight:600">🌱 Easy</span>
+            <span class="body-sm text-muted">Casual & error-prone</span>
+          </button>
+          <button class="btn btn-secondary w-full flex items-center justify-between p-m" onclick="Room.addBot('medium')">
+            <span style="font-weight:600">⚔️ Medium</span>
+            <span class="body-sm text-muted">Balanced human reflex</span>
+          </button>
+          <button class="btn btn-secondary w-full flex items-center justify-between p-m" onclick="Room.addBot('hard')">
+            <span style="font-weight:600">👑 Hard (Pro)</span>
+            <span class="body-sm text-muted">Unbeatable Minimax AI</span>
+          </button>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="UI.hideModal()">Cancel</button>
+      </div>
+    `);
+  }
+
+  function addBot(difficulty = 'medium') {
+    if (!isHost()) return;
+    Network.send(Network.MessageType.ADD_BOT, { difficulty });
+    UI.hideModal();
+    UI.showToast(`Added ${difficulty.toUpperCase()} AI Bot! 🤖`, 'info');
+  }
+
+  function fillBots(difficulty = 'medium') {
+    if (!isHost()) return;
+    Network.send(Network.MessageType.FILL_BOTS, { difficulty });
+    UI.showToast('Filling room with AI bots! ⚡', 'info');
+  }
+
   // ─── Queries ────────────────────────────────────────────────────
   function isHost() {
     return currentRoom && localPlayerId === currentRoom.hostId;
@@ -254,6 +291,17 @@ const Room = (() => {
                   )
                   .join('')}
               </div>
+
+              ${_isHost && !currentRoom.isFull ? `
+                <div class="mt-s flex gap-s" style="flex-wrap:wrap">
+                  <button class="btn btn-secondary btn-sm" onclick="Room.showAddBotModal()" id="btn-add-bot" style="font-size:0.8rem">
+                    🤖 Add Bot
+                  </button>
+                  <button class="btn btn-secondary btn-sm" onclick="Room.fillBots()" id="btn-fill-bots" style="font-size:0.8rem">
+                    ⚡ Fill with Bots
+                  </button>
+                </div>
+              ` : ''}
 
               <div class="mt-l flex gap-m" style="flex-wrap:wrap">
                 ${!_isHost
@@ -411,6 +459,9 @@ const Room = (() => {
     selectGame,
     startGame,
     kickPlayer,
+    showAddBotModal,
+    addBot,
+    fillBots,
     isHost,
     getLocalPlayer,
     allReady,

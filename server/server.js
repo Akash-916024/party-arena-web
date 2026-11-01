@@ -18,6 +18,7 @@ const {
 const { RoomManager } = require('./room-manager');
 const { createGame, getAllGames, getGameById } = require('./game-engine');
 const { TournamentManager } = require('./tournament-manager');
+const { botManager } = require('./bot-manager');
 
 const PORT = process.env.PORT || 3000;
 
@@ -205,6 +206,22 @@ function handleMessage(ws, msg) {
       roomManager.toggleRoomPublic(ws, msg.payload);
       break;
 
+    case MessageType.ADD_BOT:
+      roomManager.addBot(ws, msg.payload);
+      break;
+
+    case MessageType.REMOVE_BOT:
+      roomManager.removeBot(ws, msg.payload);
+      break;
+
+    case MessageType.FILL_BOTS:
+      roomManager.fillBots(ws, msg.payload);
+      break;
+
+    case MessageType.START_SOLO:
+      handleStartSolo(ws, msg.payload);
+      break;
+
     // ─── Game ─────────────────────────────────────────
     case MessageType.GAME_START:
       handleGameStart(ws, msg.payload);
@@ -340,6 +357,7 @@ function handleGameStart(ws, payload) {
     }
 
     // Clean up
+    botManager.onGameEnd(room);
     if (room.currentGame) {
       room.currentGame.destroy();
       room.currentGame = null;
@@ -376,6 +394,7 @@ function handleGameStart(ws, payload) {
       })
     );
     game.start();
+    botManager.onGameStart(room, game);
   }, 3500);
 
   console.log(`[Game] Starting ${gameId} in room ${room.code}`);
@@ -389,6 +408,15 @@ function handleGameInput(ws, payload) {
   if (!room.currentGame) return;
 
   room.currentGame.handleInput(playerId, payload);
+}
+
+function handleStartSolo(ws, payload) {
+  const room = roomManager.createSoloRoom(ws, payload);
+  if (!room) return;
+
+  setTimeout(() => {
+    handleGameStart(ws, { gameId: payload.gameId });
+  }, 450);
 }
 
 // ─── Tournament Handlers ────────────────────────────────────────────

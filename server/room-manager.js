@@ -11,6 +11,8 @@ const {
   createMessage,
   generateRoomCode,
 } = require('./protocol');
+const { botManager } = require('./bot-manager');
+const { getGameById } = require('./game-engine');
 
 class Player {
   constructor(id, name, colorIndex, ws, avatar = '👾') {
@@ -34,6 +36,8 @@ class Player {
       avatar: this.avatar,
       isHost: this.isHost,
       isReady: this.isReady,
+      isBot: Boolean(this.isBot),
+      difficulty: this.difficulty || null,
       score: this.score,
       teamId: this.teamId,
     };
@@ -520,6 +524,85 @@ class RoomManager {
       room.isPublic = payload.isPublic;
       this.broadcastLobbyUpdate(room);
     }
+  }
+
+  addBot(ws, payload = {}) {
+    const ctx = this.getRoomForWs(ws);
+    if (!ctx) return;
+    const { room, playerId } = ctx;
+    if (playerId !== room.hostId || room.isFull) return;
+
+    const bot = botManager.createBot(payload.difficulty || 'medium', payload.name);
+    const usedColors = new Set(Array.from(room.players.values()).map((p) => p.colorIndex));
+    for (let c = 0; c < 8; c++) {
+      if (!usedColors.has(c)) {
+        bot.colorIndex = c;
+        break;
+      }
+    }
+
+    room.addPlayer(bot);
+    this.broadcastLobbyUpdate(room);
+  }
+
+  fillBots(ws, payload = {}) {
+    const ctx = this.getRoomForWs(ws);
+    if (!ctx) return;
+    const { room, playerId } = ctx;
+    if (playerId !== room.hostId) return;
+
+    const gameDef = room.selectedGameId ? getGameById(room.selectedGameId) : null;
+    const targetCount = gameDef ? Math.min(room.maxPlayers, gameDef.maxPlayers) : room.maxPlayers;
+    const diff = payload.difficulty || 'medium';
+
+    while (room.playerCount < targetCount && !room.isFull) {
+      const bot = botManager.createBot(diff);
+      const usedColors = new Set(Array.from(room.players.values()).map((p) => p.colorIndex));
+      for (let c = 0; c < 8; c++) {
+        if (!usedColors.has(c)) {
+          bot.colorIndex = c;
+          break;
+        }
+      }
+      room.addPlayer(bot);
+    }
+    this.broadcastLobbyUpdate(room);
+  }
+
+  removeBot(ws, payload = {}) {
+    const ctx = this.getRoomForWs(ws);
+    if (!ctx) return;
+    const { room, playerId } = ctx;
+    if (playerId !== room.hostId) return;
+
+    const botId = payload.botId;
+    const player = room.players.get(botId);
+    if (player && player.isBot) {
+      room.removePlayer(botId);
+      this.broadcastLobbyUpdate(room);
+    }
+  }
+
+  createSoloRoom(ws, payload = {}) {
+    const room = this.createRoom(ws, {
+      name: payload.name || 'Player',
+      colorIndex: payload.colorIndex || 0,
+      avatar: payload.avatar || '👾',
+      isPublic: false,
+    });
+
+    if (!room) return null;
+
+    const bot = botManager.createBot(payload.difficulty || 'medium');
+    bot.colorIndex = (payload.colorIndex + 1) % 8;
+    room.addPlayer(bot);
+
+    if (payload.gameId) {
+      room.selectedGameId = payload.gameId;
+    }
+
+    this.broadcastLobbyUpdate(room);
+    return room;
   }
 
   getStats() {

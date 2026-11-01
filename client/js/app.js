@@ -84,6 +84,9 @@ const App = (() => {
             <button class="btn btn-primary btn-full" onclick="App.handleCreateRoom()" id="btn-create-room">
               ✨ Create Party Room
             </button>
+            <button class="btn btn-accent btn-full" onclick="App.showSoloPracticeModal()" id="btn-solo-practice" style="background:linear-gradient(135deg, #FF9800, #F44336);border:none;box-shadow:0 4px 16px rgba(255,152,0,0.3)">
+              🎯 Solo Practice (vs AI)
+            </button>
             <button class="btn btn-secondary btn-full" onclick="PublicRooms.showModal()" id="btn-browse-rooms">
               🌐 Browse Public Rooms
             </button>
@@ -447,6 +450,111 @@ const App = (() => {
     if (banner) banner.style.display = 'flex';
   });
 
+  let currentSoloGameId = 'pong';
+  let currentSoloDifficulty = 'medium';
+
+  function showSoloPracticeModal() {
+    Room.loadProfile();
+    const games = Room.GAMES;
+    currentSoloGameId = games[0].id;
+
+    UI.showModal(`
+      <div class="solo-modal-content" style="max-width:440px">
+        <div class="flex items-center justify-between mb-s">
+          <div class="heading-md">🎯 Solo Practice Mode</div>
+          <button class="btn btn-icon btn-secondary" onclick="UI.hideModal()" style="font-size:1.2rem">✕</button>
+        </div>
+        <p class="body-sm text-muted mb-m">Battle algorithmic AI bots with zero waiting!</p>
+
+        <!-- Choose Game -->
+        <label class="body-xs text-muted block mb-xs uppercase" style="letter-spacing:0.05em">Select Mini-Game</label>
+        <div class="solo-game-selector mb-m" style="display:grid;grid-template-columns:repeat(2, 1fr);gap:8px;max-height:220px;overflow-y:auto;padding-right:4px">
+          ${games.map((g, idx) => `
+            <div class="card p-s cursor-pointer solo-game-card ${idx === 0 ? 'selected' : ''}" 
+                 onclick="App.selectSoloGame('${g.id}', this)" 
+                 style="background:var(--surface-light);border:2px solid ${idx === 0 ? 'var(--accent)' : 'transparent'};transition:all 0.2s;text-align:left;display:flex;align-items:center;gap:10px">
+              <span style="font-size:1.8rem">${g.icon}</span>
+              <div>
+                <div class="body-sm" style="font-weight:700">${UI.escapeHTML(g.name)}</div>
+                <div class="body-xs text-muted" style="font-size:0.7rem">${g.type}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Choose Difficulty -->
+        <label class="body-xs text-muted block mb-xs uppercase" style="letter-spacing:0.05em">AI Difficulty</label>
+        <div class="flex gap-s mb-l" id="solo-diff-picker">
+          <button class="btn btn-secondary flex-1 solo-diff-btn" onclick="App.selectSoloDiff('easy', this)" style="padding:10px 4px;font-size:0.85rem">
+            🌱 Easy
+          </button>
+          <button class="btn btn-primary flex-1 solo-diff-btn active" onclick="App.selectSoloDiff('medium', this)" style="padding:10px 4px;font-size:0.85rem">
+            ⚔️ Medium
+          </button>
+          <button class="btn btn-secondary flex-1 solo-diff-btn" onclick="App.selectSoloDiff('hard', this)" style="padding:10px 4px;font-size:0.85rem">
+            👑 Hard (Pro)
+          </button>
+        </div>
+
+        <button class="btn btn-accent btn-full" id="btn-start-solo-match" onclick="App.launchSoloMatch()" style="background:linear-gradient(135deg, #FF9800, #F44336);border:none;font-weight:700">
+          ▶ Start AI Practice
+        </button>
+      </div>
+    `);
+  }
+
+  function selectSoloGame(gameId, el) {
+    currentSoloGameId = gameId;
+    document.querySelectorAll('.solo-game-card').forEach((c) => {
+      c.classList.remove('selected');
+      c.style.borderColor = 'transparent';
+    });
+    if (el) {
+      el.classList.add('selected');
+      el.style.borderColor = 'var(--accent)';
+    }
+    Sound.playClick();
+  }
+
+  function selectSoloDiff(diff, el) {
+    currentSoloDifficulty = diff;
+    document.querySelectorAll('.solo-diff-btn').forEach((b) => {
+      b.classList.remove('btn-primary', 'active');
+      b.classList.add('btn-secondary');
+    });
+    if (el) {
+      el.classList.remove('btn-secondary');
+      el.classList.add('btn-primary', 'active');
+    }
+    Sound.playClick();
+  }
+
+  function launchSoloMatch() {
+    UI.hideModal();
+    Room.loadProfile();
+    const avatar = typeof Profile !== 'undefined' ? Profile.getProfile().avatar : '👾';
+
+    UI.showToast(`Starting Solo ${currentSoloGameId.toUpperCase()} vs ${currentSoloDifficulty.toUpperCase()} Bot... 🤖`, 'info');
+
+    const sendSolo = () => {
+      Network.send(Network.MessageType.START_SOLO, {
+        gameId: currentSoloGameId,
+        difficulty: currentSoloDifficulty,
+        name: Room.localPlayerName,
+        colorIndex: Room.localColorIndex,
+        avatar: avatar,
+      });
+    };
+
+    if (!Network.isConnected) {
+      Network.connect().then(sendSolo).catch(() => {
+        UI.showToast('Could not connect to server', 'error');
+      });
+    } else {
+      sendSolo();
+    }
+  }
+
   function installPWA() {
     if (!deferredInstallPrompt) return;
     deferredInstallPrompt.prompt();
@@ -469,6 +577,10 @@ const App = (() => {
     saveProfileAndContinue,
     handleJoinSubmit,
     handleCreateRoom,
+    showSoloPracticeModal,
+    selectSoloGame,
+    selectSoloDiff,
+    launchSoloMatch,
     installPWA,
     currentSelectedColor: 0,
     get activeGame() { return activeGame; },

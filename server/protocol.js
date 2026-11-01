@@ -19,6 +19,10 @@ const MessageType = {
   GET_ROOMS: 'getRooms',
   ROOMS_LIST: 'roomsList',
   TOGGLE_PUBLIC: 'togglePublic',
+  ADD_BOT: 'addBot',
+  REMOVE_BOT: 'removeBot',
+  FILL_BOTS: 'fillBots',
+  START_SOLO: 'startSolo',
 
   // Game lifecycle
   SELECT_GAME: 'selectGame',

@@ -3,7 +3,7 @@
  * Provides offline caching, instant app loading, and PWA capabilities.
  */
 
-const CACHE_NAME = 'party-arena-v2';
+const CACHE_NAME = 'party-arena-v3';
 const STATIC_ASSETS = [
   './',
   './index.html',

@@ -32,6 +32,7 @@ Inspired by the native Party Arena mobile app, rewritten as a lightweight, serve
   - **Individual Points**: Points scored across a playlist of games (1st: 3pts, 2nd: 2pts, 3rd: 1pt).
   - **Team Battle**: 2 teams clash across matches.
   - **Knockout**: Bracket elimination format.
+- **🤖 Smart AI Bots & Solo Practice Mode**: Never wait for opponents or empty lobbies! Play any of the 7 mini-games instantly via 1-click Solo Practice against algorithmic AI bots across 3 difficulty tiers (🌱 Easy, ⚔️ Medium, 👑 Pro / Minimax). Room hosts can also backfill multiplayer lobbies with "Add Bot" or "Fill with Bots".
 - **👤 Persistent Profile & Progression**: Track total matches, win streaks, per-game records, tournament trophies (🥇 Gold, 🥈 Silver, 🥉 Bronze), customizable gamer avatars, and milestone titles (*Rookie* up to *Legendary*).
 - **🎨 Visual Theme Engine**: Instant runtime theme switching between **⚡ Cyberpunk** (electric cyan/violet), **🕹️ Retro Arcade** (phosphor neon green/amber), and **🌌 Midnight OLED** (true black).
 - **🔊 Audio & Settings Control**: Fine-tuned master volume slider, SFX toggles, and dynamic server endpoint switcher.
@@ -164,6 +165,7 @@ party-arena-web/
 │
 ├── server/                      # Backend (Node.js WebSocket Server)
 │   ├── server.js                # Main server, /health & static file host
+│   ├── bot-manager.js           # Virtual AI players & 7-game decision loops
 │   ├── room-manager.js          # Room lifecycle, spectator & player sync
 │   ├── game-engine.js           # Authoritative game loops & logic
 │   ├── tournament-manager.js    # Tournament progression state machine

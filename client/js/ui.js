@@ -104,15 +104,17 @@ const UI = (() => {
     const title = typeof Profile !== 'undefined' ? Profile.getTitle(player.wins || 0) : '';
 
     return `
-      <div class="player-item cursor-pointer" id="player-${player.id}" onclick="Profile.showPlayerInspectModal({ name: '${escapeHTML(player.name)}', avatar: '${player.avatar || '👾'}', isHost: ${Boolean(player.isHost)}, isReady: ${Boolean(player.isReady)}, wins: ${player.wins || 0} })" title="Click to view player stats">
+      <div class="player-item cursor-pointer" id="player-${player.id}" onclick="Profile.showPlayerInspectModal({ name: '${escapeHTML(player.name)}', avatar: '${player.avatar || '👾'}', isHost: ${Boolean(player.isHost)}, isReady: ${Boolean(player.isReady)}, wins: ${player.wins || 0}, isBot: ${Boolean(player.isBot)}, difficulty: '${player.difficulty || ''}' })" title="Click to view player stats">
         ${renderPlayerAvatar(player.name, player.colorIndex, player.avatar)}
         <div style="flex:1">
           <div class="player-name">
             ${escapeHTML(player.name)}${isLocal ? ' <span class="badge" style="font-size:0.7rem;background:rgba(0,240,255,0.2);color:#00F0FF">You</span>' : ''}
+            ${player.isBot ? `<span class="badge" style="font-size:0.7rem;background:rgba(255,183,3,0.18);color:#FFB703;border:1px solid rgba(255,183,3,0.3);margin-left:4px">🤖 ${(player.difficulty || 'BOT').toUpperCase()}</span>` : ''}
           </div>
           <div class="flex items-center gap-xs">
             ${player.isHost ? '<div class="player-host-badge">★ HOST</div>' : ''}
-            ${title ? `<span class="body-sm text-muted" style="font-size:0.75rem">${title}</span>` : ''}
+            ${title && !player.isBot ? `<span class="body-sm text-muted" style="font-size:0.75rem">${title}</span>` : ''}
+            ${player.isBot ? `<span class="body-sm text-muted" style="font-size:0.75rem">AI Bot</span>` : ''}
           </div>
         </div>
         <span class="player-ready-badge ${readyClass}">${readyText}</span>

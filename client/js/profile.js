@@ -234,7 +234,7 @@ const Profile = (() => {
   function showPlayerInspectModal(player) {
     if (!player) return;
     const wins = player.wins || 0;
-    const title = getTitle(wins);
+    const title = player.isBot ? `🤖 ${player.difficulty ? player.difficulty.toUpperCase() : 'AI'} BOT` : getTitle(wins);
     UI.showModal(`
       <div class="text-center p-s">
         <div class="player-avatar-preview mb-s" style="font-size:3.5rem;width:80px;height:80px;line-height:80px;border-radius:50%;background:rgba(255,255,255,0.06);margin:0 auto;box-shadow:0 8px 24px rgba(0,0,0,0.4)">
@@ -245,9 +245,15 @@ const Profile = (() => {
           ${title}
         </div>
         <div class="card p-m text-left mb-m" style="background:var(--surface-light)">
-          <div class="flex justify-between mb-xs"><span class="text-muted">Total Wins:</span> <strong>${player.wins || 0}</strong></div>
-          <div class="flex justify-between mb-xs"><span class="text-muted">Status:</span> <strong>${player.isHost ? '👑 Host' : 'Player'}</strong></div>
-          <div class="flex justify-between"><span class="text-muted">Ready State:</span> <strong>${player.isReady ? '✅ Ready' : '⏳ Waiting'}</strong></div>
+          ${player.isBot ? `
+            <div class="flex justify-between mb-xs"><span class="text-muted">Type:</span> <strong>Autonomous AI Bot</strong></div>
+            <div class="flex justify-between mb-xs"><span class="text-muted">Difficulty:</span> <strong style="text-transform:capitalize;color:var(--accent)">${player.difficulty || 'Medium'}</strong></div>
+            <div class="flex justify-between"><span class="text-muted">Status:</span> <strong>⚡ Active Simulator</strong></div>
+          ` : `
+            <div class="flex justify-between mb-xs"><span class="text-muted">Total Wins:</span> <strong>${player.wins || 0}</strong></div>
+            <div class="flex justify-between mb-xs"><span class="text-muted">Status:</span> <strong>${player.isHost ? '👑 Host' : 'Player'}</strong></div>
+            <div class="flex justify-between"><span class="text-muted">Ready State:</span> <strong>${player.isReady ? '✅ Ready' : '⏳ Waiting'}</strong></div>
+          `}
         </div>
         <button class="btn btn-secondary w-full" onclick="UI.hideModal()">Close</button>
       </div>
