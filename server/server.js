@@ -35,8 +35,11 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const pathname = parsedUrl.pathname;
+
   // Health check endpoint
-  if (req.url === '/health') {
+  if (pathname === '/health') {
     const stats = roomManager.getStats();
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(
@@ -50,14 +53,14 @@ const server = http.createServer((req, res) => {
   }
 
   // Games list API endpoint
-  if (req.url === '/api/games') {
+  if (pathname === '/api/games') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(getAllGames()));
     return;
   }
 
   // Public rooms API endpoint
-  if (req.url === '/api/rooms') {
+  if (pathname === '/api/rooms') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(roomManager.getPublicRooms()));
     return;
@@ -65,7 +68,7 @@ const server = http.createServer((req, res) => {
 
   // Serve static files from client directory (development mode)
   const clientDir = path.join(__dirname, '..', 'client');
-  let filePath = req.url === '/' ? '/index.html' : req.url;
+  let filePath = pathname === '/' ? '/index.html' : pathname;
   filePath = path.join(clientDir, filePath);
 
   // Security: prevent path traversal
