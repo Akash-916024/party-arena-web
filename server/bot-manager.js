@@ -86,10 +86,15 @@ class BotManager {
   onGameStart(room, game) {
     this.clearRoomTimers(room.code);
     const bots = Array.from(room.players.values()).filter((p) => p.isBot);
-    if (bots.length === 0) return;
+    if (bots.length === 0) {
+      console.log('[BotManager] No bots found in room', room.code);
+      return;
+    }
+
+    console.log(`[BotManager] onGameStart — game: ${game.gameId}, bots: ${bots.length}, ids: ${bots.map(b => b.id).join(', ')}`);
 
     bots.forEach((bot) => {
-      switch (game.id) {
+      switch (game.gameId) {
         case 'pong':
           this.runPongBot(room.code, bot, game);
           break;
@@ -121,6 +126,7 @@ class BotManager {
 
   // ─── 1. PONG BOT ──────────────────────────────────────────────────
   runPongBot(roomCode, bot, game) {
+    console.log(`[Bot] Starting Pong AI for ${bot.id} (${bot.difficulty}) in room ${roomCode}`);
     const interval = setInterval(() => {
       if (game.isOver) {
         clearInterval(interval);
@@ -191,6 +197,7 @@ class BotManager {
 
   // ─── 2. TIC-TAC-TOE BOT ───────────────────────────────────────────
   runTicTacToeBot(roomCode, bot, game) {
+    console.log(`[Bot] Starting TicTacToe AI for ${bot.id} (${bot.difficulty}) in room ${roomCode}`);
     const checkTurn = () => {
       if (game.isOver) return;
 
@@ -304,6 +311,7 @@ class BotManager {
 
   // ─── 3. REACTION SPEED BOT ────────────────────────────────────────
   runReactionBot(roomCode, bot, game) {
+    console.log(`[Bot] Starting Reaction AI for ${bot.id} (${bot.difficulty}) in room ${roomCode}`);
     let lastRound = -1;
     let clickedThisRound = false;
 
@@ -356,6 +364,7 @@ class BotManager {
 
   // ─── 4. CONNECT FOUR BOT ──────────────────────────────────────────
   runConnectFourBot(roomCode, bot, game) {
+    console.log(`[Bot] Starting ConnectFour AI for ${bot.id} (${bot.difficulty}) in room ${roomCode}`);
     const checkTurn = () => {
       if (game.isOver) return;
 
@@ -483,6 +492,7 @@ class BotManager {
 
   // ─── 5. MEMORY MATCH BOT ──────────────────────────────────────────
   runMemoryBot(roomCode, bot, game) {
+    console.log(`[Bot] Starting Memory AI for ${bot.id} (${bot.difficulty}) in room ${roomCode}`);
     // Memory cache for this bot: Map<cardIndex, emoji>
     const knownCards = new Map();
 
@@ -578,6 +588,7 @@ class BotManager {
 
   // ─── 6. TUG OF WAR BOT ────────────────────────────────────────────
   runTugOfWarBot(roomCode, bot, game) {
+    console.log(`[Bot] Starting TugOfWar AI for ${bot.id} (${bot.difficulty}) in room ${roomCode}`);
     let fatigue = 0;
     const interval = setInterval(() => {
       if (game.isOver) {
@@ -611,6 +622,7 @@ class BotManager {
 
   // ─── 7. BOMB TAG BOT ──────────────────────────────────────────────
   runBombTagBot(roomCode, bot, game) {
+    console.log(`[Bot] Starting BombTag AI for ${bot.id} (${bot.difficulty}) in room ${roomCode}`);
     let tickCount = 0;
     const interval = setInterval(() => {
       if (game.isOver || !game.activePlayerIds.has(bot.id)) {
@@ -686,3 +698,4 @@ module.exports = {
   BotManager,
   botManager: new BotManager(),
 };
+
