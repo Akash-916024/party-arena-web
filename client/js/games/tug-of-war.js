@@ -60,7 +60,7 @@ class TugOfWarGameRenderer extends BaseGameRenderer {
   }
 
   handlePull() {
-    if (!this.state || this.state.isOver) return;
+    if (this.isLocked || !this.state || this.state.isOver) return;
 
     this.pullCount++;
     Sound.playTug();

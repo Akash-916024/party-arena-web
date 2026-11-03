@@ -11,6 +11,7 @@ class BaseGameRenderer {
     this.state = null;
     this.animationFrameId = null;
     this.destroyed = false;
+    this.isLocked = false;
   }
 
   init() {
@@ -22,6 +23,7 @@ class BaseGameRenderer {
   }
 
   sendInput(data) {
+    if (this.isLocked) return;
     Network.send(Network.MessageType.GAME_INPUT, data);
   }
 

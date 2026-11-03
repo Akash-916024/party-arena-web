@@ -49,7 +49,7 @@ const UI = (() => {
   }
 
   // ─── Countdown Overlay ─────────────────────────────────────────
-  function showCountdown(seconds, onComplete) {
+  function showCountdown(seconds, onComplete, label = 'Game Starting...') {
     const overlay = document.getElementById('countdown-overlay');
     const numberEl = document.getElementById('countdown-number');
     overlay.classList.remove('hidden');
@@ -81,6 +81,64 @@ const UI = (() => {
         clearInterval(interval);
       }
     }, 1000);
+  }
+
+  function showInArenaCountdown(seconds, onComplete) {
+    const overlay = document.getElementById('in-arena-countdown');
+    if (!overlay) {
+      if (onComplete) onComplete();
+      return;
+    }
+
+    const titleEl = overlay.querySelector('.in-arena-countdown-title');
+    const numEl = overlay.querySelector('.in-arena-countdown-num');
+    overlay.classList.remove('hidden');
+
+    let count = seconds;
+    if (titleEl) titleEl.textContent = 'GET READY!';
+    if (numEl) {
+      numEl.textContent = count;
+      numEl.style.color = '#FFD700';
+      numEl.style.animation = 'none';
+      void numEl.offsetWidth;
+      numEl.style.animation = 'countdownPop 0.5s var(--ease-bounce)';
+    }
+
+    if (typeof Sound !== 'undefined' && Sound.playCountdown) {
+      Sound.playCountdown(false);
+    }
+
+    const interval = setInterval(() => {
+      count--;
+      if (count > 0) {
+        if (numEl) {
+          numEl.textContent = count;
+          numEl.style.animation = 'none';
+          void numEl.offsetWidth;
+          numEl.style.animation = 'countdownPop 0.5s var(--ease-bounce)';
+        }
+        if (typeof Sound !== 'undefined' && Sound.playCountdown) {
+          Sound.playCountdown(false);
+        }
+      } else {
+        if (titleEl) titleEl.textContent = '';
+        if (numEl) {
+          numEl.textContent = 'GO!';
+          numEl.style.color = 'var(--success)';
+          numEl.style.animation = 'none';
+          void numEl.offsetWidth;
+          numEl.style.animation = 'countdownPop 0.5s var(--ease-bounce)';
+        }
+        if (typeof Sound !== 'undefined' && Sound.playCountdown) {
+          Sound.playCountdown(true);
+        }
+        clearInterval(interval);
+        setTimeout(() => {
+          overlay.classList.add('hidden');
+          if (onComplete) onComplete();
+        }, 650);
+      }
+    }, 950);
   }
 
   // ─── HTML Helpers ───────────────────────────────────────────────
@@ -171,6 +229,7 @@ const UI = (() => {
     showModal,
     hideModal,
     showCountdown,
+    showInArenaCountdown,
     getPlayerColor,
     getPlayerColorName,
     renderPlayerAvatar,

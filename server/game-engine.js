@@ -144,6 +144,7 @@ class BaseGame {
         reason,
         scores: this.scores,
         ranking,
+        series: this.series || null,
       })
     );
 
@@ -296,14 +297,18 @@ class PongGame extends BaseGame {
     if (this.ball.x < 0) {
       this.scores[rightPlayer]++;
       if (this.scores[rightPlayer] >= this.winScore) {
-        this.end();
+        this.isWinning = true;
+        this.broadcastState();
+        setTimeout(() => this.end(), 1800);
         return;
       }
       this.resetBall();
     } else if (this.ball.x > this.canvasWidth) {
       this.scores[leftPlayer]++;
       if (this.scores[leftPlayer] >= this.winScore) {
-        this.end();
+        this.isWinning = true;
+        this.broadcastState();
+        setTimeout(() => this.end(), 1800);
         return;
       }
       this.resetBall();
@@ -374,16 +379,18 @@ class TicTacToeGame extends BaseGame {
     if (this.checkWin(this.playerSymbol[playerId])) {
       this.winner = playerId;
       this.scores[playerId] = 1;
+      this.isWinning = true;
       this.broadcastState();
-      this.end();
+      setTimeout(() => this.end(), 1800);
       return;
     }
 
     // Check draw
     if (this.board.every((c) => c !== null)) {
       this.isDraw = true;
+      this.isWinning = true;
       this.broadcastState();
-      this.end('draw');
+      setTimeout(() => this.end('draw'), 1800);
       return;
     }
 
@@ -593,16 +600,18 @@ class ConnectFourGame extends BaseGame {
       this.winner = playerId;
       this.winningCells = winCells;
       this.scores[playerId] = 1;
+      this.isWinning = true;
       this.broadcastState();
-      this.end();
+      setTimeout(() => this.end(), 1800);
       return;
     }
 
     // Check draw
     if (this.board.every((col) => col.every((cell) => cell !== null))) {
       this.isDraw = true;
+      this.isWinning = true;
       this.broadcastState();
-      this.end('draw');
+      setTimeout(() => this.end('draw'), 1800);
       return;
     }
 
@@ -739,8 +748,9 @@ class MemoryGame extends BaseGame {
 
         // Check if all pairs found
         if (this.matched.every((m) => m)) {
+          this.isWinning = true;
           this.broadcastState();
-          this.end();
+          setTimeout(() => this.end(), 1800);
           return;
         }
 
@@ -813,7 +823,7 @@ class TugOfWarGame extends BaseGame {
   }
 
   handleInput(playerId, input) {
-    if (this.isOver) return;
+    if (this.isOver || this.isWinning) return;
     if (input.action === 'pull') {
       const side = this.playerSide[playerId];
       if (side === 'left') {
@@ -827,7 +837,7 @@ class TugOfWarGame extends BaseGame {
   }
 
   tick() {
-    if (this.isOver) return;
+    if (this.isOver || this.isWinning) return;
 
     this.ropePosition += this.velocity;
     this.velocity *= this.decay;
@@ -835,15 +845,19 @@ class TugOfWarGame extends BaseGame {
     // Boundary / Win checks
     if (this.ropePosition <= -this.targetScore) {
       this.ropePosition = -this.targetScore;
+      this.velocity = 0;
+      this.isWinning = true;
       this.scores[this.players[0].id] = 1;
       this.broadcastState();
-      this.end();
+      setTimeout(() => this.end(), 1800);
       return;
     } else if (this.ropePosition >= this.targetScore) {
       this.ropePosition = this.targetScore;
+      this.velocity = 0;
+      this.isWinning = true;
       this.scores[this.players[1].id] = 1;
       this.broadcastState();
-      this.end();
+      setTimeout(() => this.end(), 1800);
       return;
     }
 
@@ -983,8 +997,9 @@ class BombTagGame extends BaseGame {
       if (remaining <= 1) {
         const lastWinner = Array.from(this.activePlayerIds)[0] || eliminatedPlayer;
         this.scores[lastWinner] = this.players.length;
+        this.isWinning = true;
         this.broadcastState();
-        this.end();
+        setTimeout(() => this.end(), 1800);
         return;
       } else {
         this.round++;

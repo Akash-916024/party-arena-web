@@ -65,14 +65,15 @@ const Room = (() => {
 
     Network.on(Network.MessageType.GAME_COUNTDOWN, (data) => {
       Sound.playCountdown(data.seconds === 0);
-      UI.showCountdown(data.seconds);
+      UI.showCountdown(data.seconds, null, 'Game Starting...');
     });
 
     Network.on(Network.MessageType.GAME_START, (data) => {
-      Sound.playCountdown(true);
       App.navigate('game', {
         gameId: data.gameId,
         players: data.players,
+        series: data.series,
+        arenaCountdown: data.arenaCountdown || 3,
       });
     });
 
@@ -84,7 +85,7 @@ const Room = (() => {
         const won = data.winnerId === localPlayerId;
         Profile.recordMatchResult(gameId, gameInfo ? gameInfo.name : gameId, won);
       }
-      App.navigate('results', data);
+      App.handleGameEnd(data);
     });
 
     Network.on(Network.MessageType.TOURNAMENT_UPDATE, (data) => {

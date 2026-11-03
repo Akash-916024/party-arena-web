@@ -57,6 +57,7 @@ class Room {
     this.selectedGameId = null;
     this.currentGame = null;
     this.tournament = null;
+    this.series = null;
     this.isPublic = true;
     this.createdAt = Date.now();
 
@@ -125,6 +126,7 @@ class Room {
       spectatorsCount: this.spectators.size,
       players: this.getPlayersArray(),
       tournament: this.tournament ? this.tournament.toJSON() : null,
+      series: this.series,
     };
   }
 
@@ -600,6 +602,20 @@ class RoomManager {
     if (payload.gameId) {
       room.selectedGameId = payload.gameId;
     }
+
+    const seriesFormat = payload.seriesFormat || 'bo1';
+    const targetWins = seriesFormat === 'bo5' ? 3 : seriesFormat === 'bo3' ? 2 : 1;
+    room.series = {
+      format: seriesFormat,
+      targetWins,
+      scores: {
+        [room.hostId]: 0,
+        [bot.id]: 0,
+      },
+      gamesPlayed: 0,
+      isComplete: false,
+      winnerId: null,
+    };
 
     this.broadcastLobbyUpdate(room);
     return room;

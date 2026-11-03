@@ -590,32 +590,41 @@ class BotManager {
   runTugOfWarBot(roomCode, bot, game) {
     console.log(`[Bot] Starting TugOfWar AI for ${bot.id} (${bot.difficulty}) in room ${roomCode}`);
     let fatigue = 0;
+    const startTime = Date.now();
+
     const interval = setInterval(() => {
-      if (game.isOver) {
+      if (game.isOver || game.isWinning) {
         clearInterval(interval);
         return;
       }
+
+      // Humanized 1.0s reaction delay before bot starts tugging
+      if (Date.now() - startTime < 1000) return;
 
       fatigue++;
       let shouldPull = false;
 
       if (bot.difficulty === 'easy') {
-        // ~5 pulls/sec, pauses every 25 ticks
-        shouldPull = Math.random() < 0.28 && fatigue % 30 < 22;
+        // ~4.5 pulls/sec, pauses every 25 ticks
+        shouldPull = Math.random() < 0.28 && fatigue % 30 < 20;
       } else if (bot.difficulty === 'medium') {
-        // ~8 pulls/sec
-        shouldPull = Math.random() < 0.44;
+        // ~6.0 pulls/sec, occasional rest
+        shouldPull = Math.random() < 0.40 && fatigue % 40 < 34;
       } else {
-        // Hard: 11-13 pulls/sec, surges if opponent is pulling ahead
+        // Hard: ~7.2 pulls/sec, human-level pro tapper with stamina fatigue
         const side = game.playerSide[bot.id];
         const isLosing = (side === 'left' && game.ropePosition > 20) || (side === 'right' && game.ropePosition < -20);
-        shouldPull = Math.random() < (isLosing ? 0.75 : 0.60);
+        // Small fatigue pause every 35 ticks
+        const isExhausted = fatigue % 35 > 28;
+        if (!isExhausted) {
+          shouldPull = Math.random() < (isLosing ? 0.65 : 0.52);
+        }
       }
 
       if (shouldPull) {
         game.handleInput(bot.id, { action: 'pull' });
       }
-    }, 60);
+    }, 80);
 
     this.addTimer(roomCode, interval);
   }

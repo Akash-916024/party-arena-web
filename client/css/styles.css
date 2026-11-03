@@ -1092,6 +1092,122 @@ input, select {
   animation: countdownPop 0.5s var(--ease-bounce);
 }
 
+/* ─── In-Arena Countdown Overlay (Stage 2) ───────────────────────── */
+.in-arena-countdown-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 20, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 50;
+  pointer-events: none;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.in-arena-countdown-title {
+  font-family: var(--font-heading);
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.in-arena-countdown-num {
+  font-family: var(--font-heading);
+  font-size: 6rem;
+  font-weight: 900;
+  color: #FFD700;
+  text-shadow: 0 0 35px rgba(255, 215, 0, 0.8);
+  animation: countdownPop 0.5s var(--ease-bounce);
+}
+
+/* ─── In-Game Winner Celebration Banner (Phase 1) ────────────────── */
+.in-game-celebration-banner {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(135deg, rgba(233, 69, 96, 0.95), rgba(255, 152, 0, 0.95));
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), 0 0 35px rgba(255, 152, 0, 0.6);
+  border-radius: var(--radius-lg);
+  padding: 16px 36px;
+  text-align: center;
+  z-index: 60;
+  animation: bannerPop 0.5s var(--ease-bounce);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.in-game-celebration-text {
+  font-family: var(--font-heading);
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+}
+
+.in-game-celebration-sub {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+/* ─── Glassmorphic Floating Winner Overlay (Phase 2) ─────────────── */
+.game-winner-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 26, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+  animation: fadeIn 0.35s ease-out;
+}
+
+.winner-card-glass {
+  background: rgba(26, 26, 46, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.75), 0 0 35px rgba(233, 69, 96, 0.3);
+  text-align: center;
+  animation: scaleIn 0.35s var(--ease-bounce);
+}
+
+.series-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(255, 215, 0, 0.15);
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  color: #FFD700;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+@keyframes bannerPop {
+  0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+  70% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
 /* ─── Utility Classes ────────────────────────────────────────────── */
 .hidden { display: none !important; }
 .flex { display: flex; }

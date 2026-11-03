@@ -325,9 +325,27 @@ function handleGameStart(ws, payload) {
     return;
   }
 
+  game.series = room.series;
+
   // Wire up game end handler
   const originalEnd = game.end.bind(game);
   game.end = function (reason) {
+    if (room.series) {
+      const ranking = Object.entries(game.scores)
+        .sort((a, b) => b[1] - a[1])
+        .map(([id]) => id);
+      const winnerId = ranking[0];
+      if (winnerId) {
+        room.series.scores[winnerId] = (room.series.scores[winnerId] || 0) + 1;
+        room.series.gamesPlayed++;
+        if (room.series.scores[winnerId] >= room.series.targetWins) {
+          room.series.isComplete = true;
+          room.series.winnerId = winnerId;
+        }
+      }
+      game.series = room.series;
+    }
+
     const result = originalEnd(reason);
 
     // Record result in tournament if active
@@ -375,26 +393,37 @@ function handleGameStart(ws, payload) {
   room.currentGame = game;
   room.state = RoomState.IN_GAME;
 
-  // Send countdown first
+  // Stage 1: Send lobby loading countdown
   roomManager.broadcastToRoom(
     room,
     createMessage(MessageType.GAME_COUNTDOWN, {
       gameId,
       seconds: 3,
+      stage: 'loading',
+      players: gamePlayers,
     })
   );
 
-  // Start game after countdown
+  // Transition to game arena after Stage 1 (3500ms)
   setTimeout(() => {
     roomManager.broadcastToRoom(
       room,
       createMessage(MessageType.GAME_START, {
         gameId,
         players: gamePlayers,
+        series: room.series,
+        arenaCountdown: 3,
       })
     );
-    game.start();
-    botManager.onGameStart(room, game);
+
+    // Broadcast initial state so canvas renders paddles/rope in center
+    game.broadcastState();
+
+    // Stage 2: In-arena countdown (3000ms delay before physics and bot decision loops activate)
+    setTimeout(() => {
+      game.start();
+      botManager.onGameStart(room, game);
+    }, 3000);
   }, 3500);
 
   console.log(`[Game] Starting ${gameId} in room ${room.code}`);

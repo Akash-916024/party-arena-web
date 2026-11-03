@@ -230,7 +230,7 @@ const App = (() => {
     const gameInfo = Room.GAMES.find((g) => g.id === params.gameId) || { name: 'Game', icon: '🎮' };
 
     app.innerHTML = `
-      <div class="page" id="game-page">
+      <div class="page" id="game-page" style="position:relative;overflow:hidden">
         <div class="nav-bar">
           <div class="flex flex-center gap-s">
             <span>${gameInfo.icon}</span>
@@ -242,8 +242,20 @@ const App = (() => {
           </button>
           <button class="btn btn-secondary btn-sm" onclick="Room.leaveRoom()" id="btn-quit-game">Leave</button>
         </div>
-        <div id="game-mount-point" class="w-full flex-1 flex flex-col flex-center"></div>
+        <div id="game-mount-point" class="w-full flex-1 flex flex-col flex-center" style="position:relative"></div>
         <div class="mt-s w-full">${Reactions.renderEmoteBar()}</div>
+
+        <!-- In-Arena Stage 2 Countdown Overlay -->
+        <div id="in-arena-countdown" class="in-arena-countdown-overlay hidden">
+          <div class="in-arena-countdown-title">GET READY!</div>
+          <div class="in-arena-countdown-num">3</div>
+        </div>
+
+        <!-- In-Game Celebration Banner (Phase 1) -->
+        <div id="in-game-celebration-container"></div>
+
+        <!-- Glassmorphic Winner Dialog (Phase 2) -->
+        <div id="game-winner-overlay-container"></div>
       </div>
     `;
 
@@ -284,6 +296,167 @@ const App = (() => {
     }
 
     activeGame.init();
+
+    // Stage 2: In-Arena Countdown with input lock
+    if (params.arenaCountdown) {
+      activeGame.isLocked = true;
+      UI.showInArenaCountdown(params.arenaCountdown, () => {
+        if (activeGame) activeGame.isLocked = false;
+      });
+    }
+  }
+
+  function handleGameEnd(data) {
+    if (!activeGame) {
+      renderResults(data);
+      return;
+    }
+
+    // Freeze inputs on the active game
+    activeGame.isLocked = true;
+
+    const players = Room.currentRoom?.players || [];
+    const scores = data.scores || {};
+    const ranking = data.ranking || Object.keys(scores);
+    const winnerId = ranking[0];
+    const winner = players.find((p) => p.id === winnerId) || { name: 'Player' };
+    const isLocalWinner = winnerId === Room.localPlayerId;
+    const series = data.series || Room.currentRoom?.series;
+
+    // Phase 1: 1.8-second celebration banner over frozen game
+    const celebContainer = document.getElementById('in-game-celebration-container');
+    if (celebContainer) {
+      celebContainer.innerHTML = `
+        <div class="in-game-celebration-banner">
+          <div class="in-game-celebration-text">
+            ${data.reason === 'draw' ? "IT'S A DRAW! 🤝" : isLocalWinner ? '🎉 VICTORY! 🎉' : `👑 ${UI.escapeHTML(winner.name)} WINS! 👑`}
+          </div>
+          <div class="in-game-celebration-sub">
+            ${series ? `Match ${series.gamesPlayed} of Bo${series.targetWins * 2 - 1}` : 'Round Finished'}
+          </div>
+        </div>
+      `;
+    }
+
+    // Phase 2: Slide in glassmorphic winner dialog after 1.8 seconds
+    setTimeout(() => {
+      if (celebContainer) celebContainer.innerHTML = '';
+      showWinnerModal(data, winner, isLocalWinner, series, players);
+    }, 1800);
+  }
+
+  function showWinnerModal(data, winner, isLocalWinner, series, players) {
+    const container = document.getElementById('game-winner-overlay-container');
+    if (!container) {
+      renderResults(data);
+      return;
+    }
+
+    const scores = data.scores || {};
+    const ranking = data.ranking || Object.keys(scores);
+
+    // Build series badge and stats if series active
+    let seriesHTML = '';
+    let seriesButtonsHTML = '';
+
+    if (series) {
+      const myId = Room.localPlayerId;
+      const opp = players.find((p) => p.id !== myId) || { name: 'Bot' };
+      const myScore = series.scores[myId] || 0;
+      const oppScore = series.scores[opp.id] || 0;
+      const isSeriesComplete = series.isComplete;
+      const isSeriesWon = series.winnerId === myId;
+
+      seriesHTML = `
+        <div class="series-pill-badge">
+          <span>🏆 Best of ${series.targetWins * 2 - 1}</span>
+          <span>•</span>
+          <span>You ${myScore} - ${oppScore} ${UI.escapeHTML(opp.name)}</span>
+        </div>
+      `;
+
+      if (!isSeriesComplete) {
+        seriesButtonsHTML = `
+          <button class="btn btn-primary btn-full mb-s" onclick="App.startNextSeriesRound()">
+            Next Round ▶ (${series.gamesPlayed + 1}/${series.targetWins * 2 - 1})
+          </button>
+        `;
+      } else {
+        seriesButtonsHTML = `
+          <div class="heading-sm mb-s" style="color:${isSeriesWon ? 'var(--success)' : 'var(--accent)'}">
+            ${isSeriesWon ? '👑 You Won the Series!' : `${UI.escapeHTML(opp.name)} Won the Series!`}
+          </div>
+          <button class="btn btn-accent btn-full mb-s" onclick="App.rematchSeries()">
+            Rematch Series 🔄
+          </button>
+        `;
+      }
+    } else {
+      seriesButtonsHTML = `
+        <button class="btn btn-primary btn-full mb-s" onclick="App.startNextSeriesRound()">
+          Play Again 🔄
+        </button>
+      `;
+    }
+
+    const rankItemsHTML = ranking
+      .map((pid, idx) => {
+        const p = players.find((pl) => pl.id === pid) || { name: 'Player', colorIndex: 0 };
+        const color = UI.getPlayerColor(p.colorIndex || 0);
+        const medals = ['🥇', '🥈', '🥉'];
+        const medal = medals[idx] || `#${idx + 1}`;
+        return `
+          <div class="results-rank-item" style="animation-delay:${idx * 100}ms">
+            <div class="results-rank-number">${medal}</div>
+            <div class="player-avatar" style="background:${color};width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.9rem">
+              ${p.name[0].toUpperCase()}
+            </div>
+            <div class="results-rank-name">${UI.escapeHTML(p.name)}${pid === Room.localPlayerId ? ' (You)' : ''}</div>
+            <div class="results-rank-score">${scores[pid] ?? 0} pts</div>
+          </div>
+        `;
+      })
+      .join('');
+
+    container.innerHTML = `
+      <div class="game-winner-overlay">
+        <div class="winner-card-glass">
+          ${seriesHTML}
+          <div style="font-size:3.5rem;line-height:1" class="mb-xs">${isLocalWinner ? '🏆' : '👏'}</div>
+          <div class="heading-lg mb-xs">
+            ${isLocalWinner ? 'Victory!' : `${UI.escapeHTML(winner.name)} Wins!`}
+          </div>
+          <div class="body-sm text-muted mb-m">${data.reason === 'draw' ? "It's a tie!" : 'Round Finished'}</div>
+
+          <div class="results-rank-list mb-l" style="max-height:160px;overflow-y:auto">
+            ${rankItemsHTML}
+          </div>
+
+          <div class="flex-col gap-xs">
+            ${seriesButtonsHTML}
+            <button class="btn btn-secondary btn-full" onclick="Room.leaveRoom()">
+              Back to Lobby 🏠
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function startNextSeriesRound() {
+    const container = document.getElementById('game-winner-overlay-container');
+    if (container) container.innerHTML = '';
+    const celeb = document.getElementById('in-game-celebration-container');
+    if (celeb) celeb.innerHTML = '';
+
+    const gameId = Room.currentRoom?.selectedGameId || currentSoloGameId || 'pong';
+    if (Room.isHost()) {
+      Network.send(Network.MessageType.GAME_START, { gameId });
+    }
+  }
+
+  function rematchSeries() {
+    launchSoloMatch();
   }
 
   function renderResults(data) {
@@ -452,6 +625,7 @@ const App = (() => {
 
   let currentSoloGameId = 'pong';
   let currentSoloDifficulty = 'medium';
+  let currentSoloSeriesFormat = 'bo1';
 
   function showSoloPracticeModal() {
     Room.loadProfile();
@@ -468,7 +642,7 @@ const App = (() => {
 
         <!-- Choose Game -->
         <label class="body-xs text-muted block mb-xs uppercase" style="letter-spacing:0.05em">Select Mini-Game</label>
-        <div class="solo-game-selector mb-m" style="display:grid;grid-template-columns:repeat(2, 1fr);gap:8px;max-height:220px;overflow-y:auto;padding-right:4px">
+        <div class="solo-game-selector mb-m" style="display:grid;grid-template-columns:repeat(2, 1fr);gap:8px;max-height:200px;overflow-y:auto;padding-right:4px">
           ${games.map((g, idx) => `
             <div class="card p-s cursor-pointer solo-game-card ${idx === 0 ? 'selected' : ''}" 
                  onclick="App.selectSoloGame('${g.id}', this)" 
@@ -484,7 +658,7 @@ const App = (() => {
 
         <!-- Choose Difficulty -->
         <label class="body-xs text-muted block mb-xs uppercase" style="letter-spacing:0.05em">AI Difficulty</label>
-        <div class="flex gap-s mb-l" id="solo-diff-picker">
+        <div class="flex gap-s mb-m" id="solo-diff-picker">
           <button class="btn btn-secondary flex-1 solo-diff-btn" onclick="App.selectSoloDiff('easy', this)" style="padding:10px 4px;font-size:0.85rem">
             🌱 Easy
           </button>
@@ -493,6 +667,20 @@ const App = (() => {
           </button>
           <button class="btn btn-secondary flex-1 solo-diff-btn" onclick="App.selectSoloDiff('hard', this)" style="padding:10px 4px;font-size:0.85rem">
             👑 Hard (Pro)
+          </button>
+        </div>
+
+        <!-- Choose Match Series Format -->
+        <label class="body-xs text-muted block mb-xs uppercase" style="letter-spacing:0.05em">Match Series Format</label>
+        <div class="flex gap-s mb-l" id="solo-series-picker">
+          <button class="btn btn-primary flex-1 solo-series-btn active" onclick="App.selectSoloSeries('bo1', this)" style="padding:10px 4px;font-size:0.85rem">
+            ⚡ Single (Bo1)
+          </button>
+          <button class="btn btn-secondary flex-1 solo-series-btn" onclick="App.selectSoloSeries('bo3', this)" style="padding:10px 4px;font-size:0.85rem">
+            🥇 Best of 3
+          </button>
+          <button class="btn btn-secondary flex-1 solo-series-btn" onclick="App.selectSoloSeries('bo5', this)" style="padding:10px 4px;font-size:0.85rem">
+            🏆 Best of 5
           </button>
         </div>
 
@@ -529,17 +717,32 @@ const App = (() => {
     Sound.playClick();
   }
 
+  function selectSoloSeries(format, el) {
+    currentSoloSeriesFormat = format;
+    document.querySelectorAll('.solo-series-btn').forEach((b) => {
+      b.classList.remove('btn-primary', 'active');
+      b.classList.add('btn-secondary');
+    });
+    if (el) {
+      el.classList.remove('btn-secondary');
+      el.classList.add('btn-primary', 'active');
+    }
+    Sound.playClick();
+  }
+
   function launchSoloMatch() {
     UI.hideModal();
     Room.loadProfile();
     const avatar = typeof Profile !== 'undefined' ? Profile.getProfile().avatar : '👾';
 
-    UI.showToast(`Starting Solo ${currentSoloGameId.toUpperCase()} vs ${currentSoloDifficulty.toUpperCase()} Bot... 🤖`, 'info');
+    const seriesLabel = currentSoloSeriesFormat === 'bo5' ? 'Best of 5' : currentSoloSeriesFormat === 'bo3' ? 'Best of 3' : 'Single Match';
+    UI.showToast(`Starting Solo ${currentSoloGameId.toUpperCase()} vs ${currentSoloDifficulty.toUpperCase()} Bot (${seriesLabel})... 🤖`, 'info');
 
     const sendSolo = () => {
       Network.send(Network.MessageType.START_SOLO, {
         gameId: currentSoloGameId,
         difficulty: currentSoloDifficulty,
+        seriesFormat: currentSoloSeriesFormat,
         name: Room.localPlayerName,
         colorIndex: Room.localColorIndex,
         avatar: avatar,
@@ -580,7 +783,11 @@ const App = (() => {
     showSoloPracticeModal,
     selectSoloGame,
     selectSoloDiff,
+    selectSoloSeries,
     launchSoloMatch,
+    handleGameEnd,
+    startNextSeriesRound,
+    rematchSeries,
     installPWA,
     currentSelectedColor: 0,
     get activeGame() { return activeGame; },
