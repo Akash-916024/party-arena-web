@@ -303,14 +303,28 @@ function handleGameStart(ws, payload) {
   }
 
   // Get player list for the game
-  const gamePlayers = room.getPlayersArray();
-  if (gamePlayers.length < gameDef.minPlayers) {
+  const allPlayers = room.getPlayersArray();
+  if (allPlayers.length < gameDef.minPlayers) {
     ws.send(
       createMessage(MessageType.ROOM_ERROR, {
         error: `At least ${gameDef.minPlayers} players needed to start ${gameDef.name}.`,
       })
     );
     return;
+  }
+
+  // Handle max player constraints (e.g. 2-player games like Pong with 4 bots)
+  let gamePlayers = allPlayers;
+  if (gameDef.maxPlayers && allPlayers.length > gameDef.maxPlayers) {
+    if (room.tournament) {
+      const offset = (room.tournament.currentGameIndex * gameDef.maxPlayers) % allPlayers.length;
+      gamePlayers = [];
+      for (let i = 0; i < gameDef.maxPlayers; i++) {
+        gamePlayers.push(allPlayers[(offset + i) % allPlayers.length]);
+      }
+    } else {
+      gamePlayers = allPlayers.slice(0, gameDef.maxPlayers);
+    }
   }
 
   // Create game instance
@@ -355,6 +369,12 @@ function handleGameStart(ws, payload) {
     if (room.tournament) {
       room.tournament.recordMatchResult(result);
 
+      // Sync tournament points onto room players so rankings and UI stay in sync!
+      for (const [pid, pts] of Object.entries(room.tournament.playerScores)) {
+        const player = room.players.get(pid);
+        if (player) player.score = pts;
+      }
+
       if (room.tournament.isComplete) {
         // Tournament complete
         roomManager.broadcastToRoom(
@@ -384,9 +404,10 @@ function handleGameStart(ws, payload) {
       room.currentGame = null;
     }
 
-    // Reset ready states
+    // Reset ready states (Bots are ALWAYS ready!)
     for (const p of room.players.values()) {
-      if (!p.isHost) p.isReady = false;
+      if (!p.isHost && !p.isBot) p.isReady = false;
+      if (p.isBot) p.isReady = true;
     }
 
     roomManager.broadcastLobbyUpdate(room);

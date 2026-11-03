@@ -60,7 +60,9 @@ const Room = (() => {
 
     Network.on(Network.MessageType.LOBBY_UPDATE, (data) => {
       currentRoom = data;
-      renderLobby();
+      if (App.currentScreen === 'lobby') {
+        renderLobby();
+      }
     });
 
     Network.on(Network.MessageType.GAME_COUNTDOWN, (data) => {
@@ -90,13 +92,16 @@ const Room = (() => {
 
     Network.on(Network.MessageType.TOURNAMENT_UPDATE, (data) => {
       TournamentClient.setTournament(data);
-      renderLobby(); // Update lobby tournament info
+      if (App.currentScreen === 'lobby') {
+        renderLobby();
+      }
     });
 
     Network.on(Network.MessageType.TOURNAMENT_END, (data) => {
       TournamentClient.setTournament(data);
-      if (typeof Profile !== 'undefined' && data.standings) {
-        const myIndex = data.standings.findIndex((s) => s.playerId === localPlayerId || s.name === localPlayerName);
+      if (typeof Profile !== 'undefined') {
+        const standings = data.rankings || data.standings || [];
+        const myIndex = standings.findIndex((s) => s.playerId === localPlayerId || s.name === localPlayerName);
         if (myIndex >= 0) {
           Profile.recordTournamentResult(myIndex + 1);
         }
@@ -221,7 +226,7 @@ const Room = (() => {
 
   function allReady() {
     if (!currentRoom || currentRoom.players.length < 2) return false;
-    return currentRoom.players.every((p) => p.isReady || p.id === currentRoom.hostId);
+    return currentRoom.players.every((p) => p.isReady || p.isBot || p.id === currentRoom.hostId);
   }
 
   function canStartGame() {
@@ -229,7 +234,7 @@ const Room = (() => {
     const game = GAMES.find((g) => g.id === currentRoom.selectedGameId);
     if (!game) return false;
     const count = currentRoom.players.length;
-    return count >= game.minPlayers && count <= game.maxPlayers && allReady();
+    return count >= game.minPlayers && allReady();
   }
 
   // ─── Rendering ──────────────────────────────────────────────────
@@ -327,17 +332,35 @@ const Room = (() => {
 
               ${tournament
                 ? `<div class="card mt-l">
-                     <div class="heading-sm">🏆 Tournament</div>
-                     <div class="body-sm mt-s">Mode: ${tournament.mode}</div>
-                     <div class="body-sm">Game ${tournament.gamesPlayed + 1} of ${tournament.totalGames}</div>
-                     <div class="tournament-progress mt-m">
+                     <div class="flex items-center justify-between">
+                       <div class="heading-sm">🏆 Tournament (${tournament.mode})</div>
+                       <span class="badge" style="background:rgba(255,215,0,0.15);color:#FFD700">Game ${tournament.gamesPlayed + 1}/${tournament.totalGames}</span>
+                     </div>
+                     <div class="tournament-progress mt-s mb-s">
                        ${tournament.gameIds.map((_, i) =>
                          `<div class="tournament-dot ${i < tournament.gamesPlayed ? 'completed' : i === tournament.gamesPlayed ? 'current' : ''}"></div>`
                        ).join('')}
                      </div>
-                     ${_isHost
-                       ? `<button class="btn btn-primary btn-sm mt-m" onclick="Room.startTournamentGame()">
-                            ▶ Start Next Game
+                     <div class="body-xs text-muted mb-xs uppercase" style="letter-spacing:0.05em;font-weight:700">Current Leaderboard</div>
+                     <div class="tournament-mini-leaderboard mb-m" style="background:var(--surface-light);border-radius:var(--radius-sm);padding:8px">
+                       ${(tournament.rankings || []).map((r) => `
+                         <div class="flex items-center justify-between py-xs body-xs">
+                           <span class="flex items-center gap-xs">
+                             <span>${r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : `#${r.rank}`}</span>
+                             <strong>${UI.escapeHTML(r.player?.name || 'Player')}</strong>
+                           </span>
+                           <span style="color:#FFD700;font-weight:700">${r.totalScore} pts</span>
+                         </div>
+                       `).join('')}
+                     </div>
+                     ${_isHost && !tournament.isComplete
+                       ? `<button class="btn btn-primary btn-sm w-full" onclick="Room.startTournamentGame()">
+                            ▶ Start Next Game (${tournament.gamesPlayed + 1}/${tournament.totalGames})
+                          </button>`
+                       : ''}
+                     ${tournament.isComplete
+                       ? `<button class="btn btn-accent btn-sm w-full" onclick="App.navigate('tournament-results', TournamentClient.getTournament() || Room.currentRoom?.tournament)">
+                            🏆 View Final Podium ▶
                           </button>`
                        : ''}
                    </div>`

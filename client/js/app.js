@@ -354,12 +354,52 @@ const App = (() => {
 
     const scores = data.scores || {};
     const ranking = data.ranking || Object.keys(scores);
+    const tournament = Room.currentRoom?.tournament || TournamentClient.getTournament();
 
-    // Build series badge and stats if series active
+    // Build series / tournament badge and stats
     let seriesHTML = '';
     let seriesButtonsHTML = '';
 
-    if (series) {
+    if (tournament) {
+      const isComplete = tournament.isComplete;
+      const nextGameId = tournament.currentGameId;
+      const nextGame = Room.GAMES.find((g) => g.id === nextGameId);
+
+      seriesHTML = `
+        <div class="series-pill-badge">
+          <span>🏆 Tournament: Match ${tournament.gamesPlayed} of ${tournament.totalGames}</span>
+        </div>
+      `;
+
+      if (!isComplete) {
+        if (Room.isHost()) {
+          seriesButtonsHTML = `
+            <button class="btn btn-primary btn-full mb-s" onclick="Room.startTournamentGame()">
+              ▶ Start Next Game: ${nextGame?.name || 'Next Match'} (${tournament.gamesPlayed + 1}/${tournament.totalGames})
+            </button>
+            <button class="btn btn-secondary btn-full mb-s" onclick="App.navigate('lobby')">
+              Back to Lobby 🏠
+            </button>
+          `;
+        } else {
+          seriesButtonsHTML = `
+            <div class="body-sm text-muted mb-m">Waiting for host to start next game (${tournament.gamesPlayed + 1}/${tournament.totalGames})...</div>
+            <button class="btn btn-secondary btn-full mb-s" onclick="App.navigate('lobby')">
+              Back to Lobby 🏠
+            </button>
+          `;
+        }
+      } else {
+        seriesButtonsHTML = `
+          <button class="btn btn-primary btn-full mb-s" onclick="App.navigate('tournament-results', TournamentClient.getTournament() || Room.currentRoom?.tournament)">
+            🏆 View Tournament Final Results ▶
+          </button>
+          <button class="btn btn-secondary btn-full mb-s" onclick="App.navigate('lobby')">
+            Back to Lobby 🏠
+          </button>
+        `;
+      }
+    } else if (series) {
       const myId = Room.localPlayerId;
       const opp = players.find((p) => p.id !== myId) || { name: 'Bot' };
       const myScore = series.scores[myId] || 0;
@@ -791,6 +831,7 @@ const App = (() => {
     installPWA,
     currentSelectedColor: 0,
     get activeGame() { return activeGame; },
+    get currentScreen() { return currentScreen; },
   };
 })();
 
