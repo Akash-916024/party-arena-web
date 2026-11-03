@@ -85,9 +85,10 @@ class BotManager {
    */
   onGameStart(room, game) {
     this.clearRoomTimers(room.code);
-    const bots = Array.from(room.players.values()).filter((p) => p.isBot);
+    const activePlayerIds = new Set((game.players || []).map((p) => p.id));
+    const bots = Array.from(room.players.values()).filter((p) => p.isBot && activePlayerIds.has(p.id));
     if (bots.length === 0) {
-      console.log('[BotManager] No bots found in room', room.code);
+      console.log('[BotManager] No active bots found in game for room', room.code);
       return;
     }
 

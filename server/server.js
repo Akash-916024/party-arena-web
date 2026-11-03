@@ -317,7 +317,7 @@ function handleGameStart(ws, payload) {
   let gamePlayers = allPlayers;
   if (gameDef.maxPlayers && allPlayers.length > gameDef.maxPlayers) {
     if (room.tournament) {
-      const offset = (room.tournament.currentGameIndex * gameDef.maxPlayers) % allPlayers.length;
+      const offset = room.tournament.currentGameIndex % allPlayers.length;
       gamePlayers = [];
       for (let i = 0; i < gameDef.maxPlayers; i++) {
         gamePlayers.push(allPlayers[(offset + i) % allPlayers.length]);
@@ -383,6 +383,7 @@ function handleGameStart(ws, payload) {
         );
         room.tournament = null;
         room.state = RoomState.WAITING;
+        roomManager.broadcastLobbyUpdate(room);
       } else {
         // Next tournament game
         roomManager.broadcastToRoom(
@@ -392,9 +393,12 @@ function handleGameStart(ws, payload) {
             room.tournament.toJSON()
           )
         );
+        room.state = RoomState.TOURNAMENT;
+        roomManager.broadcastLobbyUpdate(room);
       }
     } else {
       room.state = RoomState.WAITING;
+      roomManager.broadcastLobbyUpdate(room);
     }
 
     // Clean up

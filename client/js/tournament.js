@@ -19,6 +19,7 @@ const TournamentClient = (() => {
   }
 
   function renderTournamentResults(data) {
+    if (!data) data = tournament || {};
     const rankings = data.rankings || [];
     const matchResults = data.matchResults || [];
 

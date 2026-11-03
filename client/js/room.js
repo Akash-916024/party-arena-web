@@ -92,6 +92,9 @@ const Room = (() => {
 
     Network.on(Network.MessageType.TOURNAMENT_UPDATE, (data) => {
       TournamentClient.setTournament(data);
+      if (currentRoom) {
+        currentRoom.tournament = data;
+      }
       if (App.currentScreen === 'lobby') {
         renderLobby();
       }
@@ -99,6 +102,9 @@ const Room = (() => {
 
     Network.on(Network.MessageType.TOURNAMENT_END, (data) => {
       TournamentClient.setTournament(data);
+      if (currentRoom) {
+        currentRoom.tournament = data;
+      }
       if (typeof Profile !== 'undefined') {
         const standings = data.rankings || data.standings || [];
         const myIndex = standings.findIndex((s) => s.playerId === localPlayerId || s.name === localPlayerName);
@@ -106,7 +112,11 @@ const Room = (() => {
           Profile.recordTournamentResult(myIndex + 1);
         }
       }
-      App.navigate('tournament-results', data);
+      // If the player is NOT actively watching the final match celebration/modal, navigate immediately.
+      // If they are in a match, the celebratory winner dialog has "🏆 View Tournament Final Results ▶" for smooth transition.
+      if (App.currentScreen !== 'game') {
+        App.navigate('tournament-results', data);
+      }
     });
 
     Network.on('connectionChange', (data) => {
@@ -451,7 +461,15 @@ const Room = (() => {
   }
 
   function startTournamentGame() {
-    if (!isHost() || !currentRoom.tournament) return;
+    const tournament = currentRoom?.tournament || TournamentClient.getTournament();
+    if (!isHost() || !tournament) return;
+
+    // Clear active match overlays so next match countdown is clearly visible
+    const container = document.getElementById('game-winner-overlay-container');
+    if (container) container.innerHTML = '';
+    const celeb = document.getElementById('in-game-celebration-container');
+    if (celeb) celeb.innerHTML = '';
+
     Network.send(Network.MessageType.TOURNAMENT_START, {});
   }
 

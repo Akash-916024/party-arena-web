@@ -209,7 +209,7 @@ class PongGame extends BaseGame {
   }
 
   handleInput(playerId, input) {
-    if (this.isOver) return;
+    if (this.isOver || this.isWinning) return;
     // Input: { y: number } — paddle target Y position (0 to canvasHeight)
     if (typeof input.y === 'number') {
       const halfPaddle = this.paddleHeight / 2;
@@ -221,7 +221,7 @@ class PongGame extends BaseGame {
   }
 
   tick() {
-    if (this.isOver) return;
+    if (this.isOver || this.isWinning) return;
 
     // Move ball
     this.ball.x += this.ball.vx;
@@ -298,6 +298,8 @@ class PongGame extends BaseGame {
       this.scores[rightPlayer]++;
       if (this.scores[rightPlayer] >= this.winScore) {
         this.isWinning = true;
+        this.ball.vx = 0;
+        this.ball.vy = 0;
         this.broadcastState();
         setTimeout(() => this.end(), 1800);
         return;
@@ -307,6 +309,8 @@ class PongGame extends BaseGame {
       this.scores[leftPlayer]++;
       if (this.scores[leftPlayer] >= this.winScore) {
         this.isWinning = true;
+        this.ball.vx = 0;
+        this.ball.vy = 0;
         this.broadcastState();
         setTimeout(() => this.end(), 1800);
         return;
@@ -363,7 +367,7 @@ class TicTacToeGame extends BaseGame {
   }
 
   handleInput(playerId, input) {
-    if (this.isOver) return;
+    if (this.isOver || this.isWinning) return;
 
     // Check it's this player's turn
     if (this.players[this.currentTurn].id !== playerId) return;
@@ -466,7 +470,7 @@ class ReactionGame extends BaseGame {
   }
 
   handleInput(playerId, input) {
-    if (this.isOver) return;
+    if (this.isOver || this.isWinning) return;
 
     if (input.action === 'click') {
       if (this.roundState === 'waiting') {
@@ -579,7 +583,7 @@ class ConnectFourGame extends BaseGame {
   }
 
   handleInput(playerId, input) {
-    if (this.isOver) return;
+    if (this.isOver || this.isWinning) return;
     if (this.players[this.currentTurn].id !== playerId) return;
 
     const { col } = input;
@@ -713,7 +717,7 @@ class MemoryGame extends BaseGame {
   }
 
   handleInput(playerId, input) {
-    if (this.isOver || this.isProcessing) return;
+    if (this.isOver || this.isWinning || this.isProcessing) return;
     if (this.players[this.currentTurn].id !== playerId) return;
 
     const { cardIndex } = input;
@@ -948,7 +952,7 @@ class BombTagGame extends BaseGame {
   }
 
   tick() {
-    if (this.isOver) return;
+    if (this.isOver || this.isWinning) return;
 
     this.bombTimer -= 1 / 30;
 

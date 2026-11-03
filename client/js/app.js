@@ -377,25 +377,16 @@ const App = (() => {
             <button class="btn btn-primary btn-full mb-s" onclick="Room.startTournamentGame()">
               ▶ Start Next Game: ${nextGame?.name || 'Next Match'} (${tournament.gamesPlayed + 1}/${tournament.totalGames})
             </button>
-            <button class="btn btn-secondary btn-full mb-s" onclick="App.navigate('lobby')">
-              Back to Lobby 🏠
-            </button>
           `;
         } else {
           seriesButtonsHTML = `
             <div class="body-sm text-muted mb-m">Waiting for host to start next game (${tournament.gamesPlayed + 1}/${tournament.totalGames})...</div>
-            <button class="btn btn-secondary btn-full mb-s" onclick="App.navigate('lobby')">
-              Back to Lobby 🏠
-            </button>
           `;
         }
       } else {
         seriesButtonsHTML = `
           <button class="btn btn-primary btn-full mb-s" onclick="App.navigate('tournament-results', TournamentClient.getTournament() || Room.currentRoom?.tournament)">
             🏆 View Tournament Final Results ▶
-          </button>
-          <button class="btn btn-secondary btn-full mb-s" onclick="App.navigate('lobby')">
-            Back to Lobby 🏠
           </button>
         `;
       }
@@ -474,7 +465,7 @@ const App = (() => {
 
           <div class="flex-col gap-xs">
             ${seriesButtonsHTML}
-            <button class="btn btn-secondary btn-full" onclick="Room.leaveRoom()">
+            <button class="btn btn-secondary btn-full" onclick="App.navigate('lobby')">
               Back to Lobby 🏠
             </button>
           </div>
