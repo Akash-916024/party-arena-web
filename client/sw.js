@@ -3,7 +3,7 @@
  * Provides offline caching, instant app loading, and PWA capabilities.
  */
 
-const CACHE_NAME = 'party-arena-v3';
+const CACHE_NAME = 'party-arena-v4';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -67,21 +67,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Network-first with cache fallback
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseClone);
-            });
-          }
-          return networkResponse;
-        })
-        .catch(() => cached);
-
-      return cached || fetchPromise;
-    })
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
